@@ -1,0 +1,20 @@
+[    0.115825] smp: Brought up 1 node, 2 CPUs
+[    0.547209] esp32s31-clk 20587000.syscon:clock-controller: esp clk provider registered (24 clocks)
+[    0.553416] esp32s31-reset 20587000.syscon:reset-controller: ESP32-S31 reset provider registered
+[    0.854720] esp32s31-rmt-ws2812 20355000.rmt:led@0: WS2812 RMT TX0 ready (IRQ completion)
+[    0.857290] esp32s31-rmt 20355000.rmt: RMT TX: 4 channels, IRQ 15, clock 40000000 Hz
+2 packets transmitted, 2 packets received, 0% packet loss
+
+Operator confirmed smooth physical spectral fade.
+
+rmt-v2-runtime.log
+15:          1          0 esp-intmtx  22 Level     20355000.rmt
+Mem:          14376        2908       10832           0         636       10436
+RGB=255 0 0 STATUS=0
+RGB=0 255 0 STATUS=0
+RGB=0 0 255 STATUS=0
+15:          5          0 esp-intmtx  22 Level     20355000.rmt
+
+rmt-v2-fade.log
+15:          7          0 esp-intmtx  22 Level     20355000.rmt
+15:        219          0 esp-intmtx  22 Level     20355000.rmt
