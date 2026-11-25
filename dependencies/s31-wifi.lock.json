@@ -28,7 +28,7 @@
     "source_repo": "https://github.com/GrieferPig/u-boot-esp32-s31.git",
     "base_commit": "997ee15fdbc0209f998121aa58190487c71e0aca",
     "contribution_repo": "https://github.com/gnfranco/u-boot.git",
-    "review_commit": "0686a3b2137f388826dccd65a8be71cacc2ea0d2",
+    "review_commit": "40498f22d345783cdf4abb5bb3528d9011dcbe84",
     "source_tree": "df4175eb4edee910544ad2e477d9cbb454edb210",
     "review": "https://github.com/GrieferPig/u-boot-esp32-s31/pull/1",
     "patch": {
@@ -46,7 +46,8 @@
       "sha256": "885f9eb87b0be725779ddc56d091ee8be1351600bf6a70a9ba6e5269ae4b36de"
     },
     "offset": 8192,
-    "slot_end": 57344
+    "slot_end": 57344,
+    "dco": "signed-off"
   },
   "firmware_research_only": {
     "repo": "https://github.com/GrieferPig/esp32-s31-linux-firmware.git",
