@@ -45,3 +45,7 @@ Keep dependency updates isolated; never track moving branch tips as release inpu
 
 Community submission: https://github.com/GrieferPig/u-boot-esp32-s31/pull/1
 Vendor submission: https://github.com/espressif/u-boot/pull/1
+
+## Subsequent radio experiments
+
+See [2026-11-25 radio experiments](WIFI-RADIO-EXPERIMENTS-20261125.md) for the separate November-payload Wi-Fi-only and mixed-cipher software crypto checkpoint. The October SPL-only validation above remains unchanged.
