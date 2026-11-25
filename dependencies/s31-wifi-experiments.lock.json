@@ -136,5 +136,26 @@
       "test.log": "4483a0b2a1a8ec7d06755ab22f7bcfa3bd6a5b709ea6995b097ea7476cac31af",
       "restore.log": "baf004fc1f6520a00339ed0007c0e1c7666d566c0856c447fc0c101c04ee9f9d"
     }
+  },
+  "gatt_followup": {
+    "mode": "combo verified",
+    "wpa2_mixed_cipher": "PASS",
+    "dhcp": "PASS",
+    "ble_connection": "PASS",
+    "att_read_write_readback": "PASS",
+    "test_write_bytes": 8,
+    "gateway_icmp_during_gatt_test": "20/20",
+    "rtt_ms": {
+      "min": 9.063,
+      "avg": 9.897,
+      "max": 11.806
+    },
+    "advertising_stop": "not independently verified",
+    "classic_a2dp": "not tested; remote execution safety check blocked test harness",
+    "restore": "radio and rootfs flash verified; post-restore boot not independently checked",
+    "evidence_sha256": {
+      "wpa-gatt.log": "45f4b62ab6019a522d2814fa9e30142b134cf0747bcc858626bb124883162a7d",
+      "restore.log": "ab9923617c4bc79a643ebf5fe8b7641738210176e91766da004b19273fe2f5cc"
+    }
   }
 }
