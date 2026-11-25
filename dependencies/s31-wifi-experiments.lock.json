@@ -1,0 +1,97 @@
+{
+  "schema": 1,
+  "date": "2026-11-25",
+  "classification": "experimental engineering only; no binary redistribution",
+  "producer": {
+    "repo": "https://github.com/GrieferPig/esp32-s31-linux-firmware",
+    "base": "15ba03651e8a26fa5972ef01d63bbc9aa814a76a",
+    "wifi_only": "b3c1594da4c1b31b56ff3206bc89102971693495",
+    "no_idf_eap": "fad1b74360fa43daec107109e0da7024ece60c04",
+    "idf": "08e0d30a74ad0bfd5a34933142b80f45619ee410"
+  },
+  "kernel": {
+    "repo": "https://github.com/GrieferPig/linux-esp32-s31",
+    "base": "c57745752022e03d2248d397429345a1157dc7e4",
+    "branch": "feature/p4-integration",
+    "tested_commit": "65ae6d60897bd36abca0dc09ecba560a3759a9f7",
+    "pr": "https://github.com/GrieferPig/linux-esp32-s31/pull/3"
+  },
+  "patches": {
+    "patches/experimental/s31-wifi/0002-radio-wifi-only.patch": {
+      "bytes": 27159,
+      "sha256": "cf0d2cd232ecece30946391931e25498255f4c296c8a0a88d0ad0f0f5b259f40"
+    },
+    "patches/experimental/s31-wifi/0003-radio-no-idf-eap.patch": {
+      "bytes": 2823,
+      "sha256": "2c41cb6de5fe7b3ac7b8f34ed5c04d067ad7f0211546f44222b25d04a37481a0"
+    },
+    "patches/experimental/s31-wifi/0004-softmac-software-tkip.mbox": {
+      "bytes": 10532,
+      "sha256": "a97ec244f77757891b47d33beb67b8704d6145d2e7c7e55b3dc67406c20bc50e"
+    }
+  },
+  "local_artifacts": {
+    "combined_radio": {
+      "bytes": 1565056,
+      "sha256": "bad8768d83313ec6ed1121af7f5d5e963676038e52043e5f41ce5b335ff06d37"
+    },
+    "wifi_only_radio": {
+      "bytes": 740304,
+      "sha256": "e1f2f5556ff4b1f304f310f0d929e787c7df865a9e1e90a4f3e8e33e19b03d3c"
+    },
+    "no_idf_eap_radio": {
+      "bytes": 646432,
+      "sha256": "81e8e02a8136f4ae3683493250e69ef8ae3990a43d260b1522799910ad3c99fd"
+    },
+    "kernel_xip": {
+      "bytes": 6131148,
+      "sha256": "e654e9dde263c8ca22ba47f718927bb738ee37e299a169dcaead8777e2d12aad"
+    },
+    "original_rootfs": {
+      "bytes": 3198976,
+      "sha256": "2d4e5f39003b97d641a85ca4d9fc406a9022866a34c328c8c6a88df8ac599173"
+    },
+    "mixed_cipher_rootfs": {
+      "bytes": 3198976,
+      "sha256": "2b9bfc721c8722c776315aeb1e016b4115dd61d94fd28e807c387e36a53aa3f6"
+    },
+    "mixed_cipher_module_stripped": {
+      "bytes": 237016,
+      "sha256": "d4e11f4267079e13486fb33f9be03c6a230bfda45a69defbcd41b710124f04cb"
+    }
+  },
+  "quality": {
+    "wpa2_associations": 4,
+    "dhcp": 4,
+    "gateway_icmp": 35,
+    "gateway_icmp_received": 35,
+    "icmp_1000_byte_payload": 30,
+    "profile_switches": 2,
+    "passive_scans_after_switch": 4,
+    "cipher_pairwise": "CCMP",
+    "cipher_group": "TKIP",
+    "credential_cleanup_confirmed": true,
+    "local_evidence_sha256": {
+      "quality-wpa.log": "56f00b6356f3e72ef98f262b906463f2c0d5d65c606f68cdd3b3c0f5791ee479",
+      "profile-cycle.log": "ac39b5b8579ce603eab0067d497066c97e9e0e191df9662f60e87f9220dc6e9d"
+    }
+  },
+  "rollback": {
+    "tags": [
+      "s31-kernel-pre-tkip-20261125",
+      "s31-wifi-only-pre-tkip-20261125",
+      "s31-no-idf-eap-pre-tkip-20261125",
+      "s31-tkip-mixed-validated-20261125"
+    ],
+    "checkpoint_manifest_sha256": "fc08f714b76df226e22fd032c55a6edd4389023779ed38a1fb19163317a046a0"
+  },
+  "limitations": [
+    "Pairwise TKIP, group rekey, HTTP and throughput not tested.",
+    "Default CCMP mode validated by module cycling, cipher advertisement and passive scanning only, not association.",
+    "No-IDF-EAP variant boot/scan/reboot only, not mixed-cipher association.",
+    "Rebuilt combo payload not byte-identical to original control; physical regression pending.",
+    "Rootfs manual tmpfs initialization required; no production release.",
+    "TKIP draft contains checkpatch style warnings.",
+    "Release archive schema does not identify experimental profiles; do not publish them as standard release inputs."
+  ]
+}
