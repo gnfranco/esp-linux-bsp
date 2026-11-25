@@ -107,7 +107,8 @@
       "gateway_icmp": "5/5",
       "post_hci_attempt_icmp": "10/10",
       "hci_reset": "INCONCLUSIVE; no valid command complete event",
-      "radio_sha256": "92c888ee18fee84ddd065b62029e783a04e7e0c284518ee8b0ef2c3afb2de87a"
+      "radio_sha256": "92c888ee18fee84ddd065b62029e783a04e7e0c284518ee8b0ef2c3afb2de87a",
+      "mode_correction": "Combined payload tested in wifi mode: original local init script overrode requested combo. No Bluetooth was active in that earlier test."
     },
     "pairwise_tkip": "AP rejected association status 18; HT disabled by mac80211; no data-plane validation",
     "restore": "Wi-Fi-only radio slot flash hash verified; boot not rechecked after final restoration",
@@ -117,6 +118,23 @@
       "pairwise-tkip.log": "375e570679de67e499e8361caf1fa344542f39f857f92444ffa45e041ebbf2fb",
       "restore-after-no-eap.log": "0fbadef160c9e0f81c5e261bbcb769fc3fbaac7c884125911dd89f54264e64cb",
       "restore-after-combo.log": "3f8fd1b32ff0cc9d6c3c00c163db334a599ee7ed62b7bab1808dd017c486b610"
+    }
+  },
+  "bluetooth_followup": {
+    "mode": "combo verified at runtime",
+    "radio_sha256": "92c888ee18fee84ddd065b62029e783a04e7e0c284518ee8b0ef2c3afb2de87a",
+    "temporary_rootfs_sha256": "23bba2164b22ea6d79b54e800ee9df7b106ea4edc3c6a40a633aa08b15edb7cc",
+    "hci_reset": "PASS",
+    "hci_read_local_version": "PASS",
+    "ble_advertising": "PASS",
+    "orion_ble_discovery": "PASS",
+    "rssi_dbm": -44,
+    "wifi_passive_scan_during_advertising": "PASS",
+    "advertising_stop": "not observed before test assertion; scheduled delay exceeded the observation window",
+    "restore": "radio and rootfs flash verification passed; post-restore boot pending",
+    "evidence_sha256": {
+      "test.log": "4483a0b2a1a8ec7d06755ab22f7bcfa3bd6a5b709ea6995b097ea7476cac31af",
+      "restore.log": "baf004fc1f6520a00339ed0007c0e1c7666d566c0856c447fc0c101c04ee9f9d"
     }
   }
 }

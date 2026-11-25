@@ -32,3 +32,7 @@ Upstream kernel review: https://github.com/GrieferPig/linux-esp32-s31/pull/3 (dr
 - The Wi-Fi-only radio slot was restored and flash verification succeeded after both experiments. The final post-restore boot was not independently checked. HTTP/throughput and periodic group rekey remain unvalidated.
 
 Raw private network logs remain local; the manifest records their hashes and sanitized outcomes only.
+
+## Bluetooth hardware follow-up
+
+Correction: the earlier combined-payload WPA2 test ran in Wi-Fi-only mode because the temporary init script overrode the requested combo setting. It was a valid Wi-Fi regression, not a coexistence test. After correcting the local test image, the runtime reported combo mode with both frontends ready. Direct HCI Reset, Read Local Version and BLE advertising parameter/data/enable commands returned status zero. The Orion Intel AX201/BlueZ detected the test advertisement at -44 dBm; a Wi-Fi passive scan succeeded during advertising. The test script checked the stop marker too early, so advertising shutdown was not independently confirmed. Both original Wi-Fi-only radio slot and rootfs were restored with verified flash hashes. No claim of BLE connection/GATT, Classic pairing, A2DP, concurrent IP throughput, or default-mode WPA2 association. No identifiers or raw private logs are published.
