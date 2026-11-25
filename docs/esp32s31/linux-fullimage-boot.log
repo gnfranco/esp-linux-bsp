@@ -1,0 +1,147 @@
+ESP-ROM:esp32s31-20251218
+Build:Dec 18 2025
+rst:0x1 (POWERON),boot:0x58 (SPI_FAST_FLASH_BOOT)
+SPI mode:DIO, clock div:1
+load:0x2f040000,len:0x9824
+entry 0x2f040000
+
+U-Boot SPL 2024.07 (Nov 24 2026 - 23:14:47 -0300)
+ESP32-S31 SPL active
+flash-qio: QIO @ 80 MHz enabled
+S31-FIX: PSRAM start
+S31-FIX: analog I2C gates: modem=00000001 lpcon=00000001 force=00000004 syscon=00201002
+S31-FIX: CPU PLL calibration stopped before MPLLS31-FIX: MPLL cal start ctrl=0000004d div=00000299
+S31-FIX: MPLL CAL OK ctrl=0000034d
+S31-DIAG: mspi clock done
+S31-DIAG: pin init done
+S31-DIAG: controller init done
+S31-DIAG: mode register begin
+S31-DIAG: MR0 raw=0x00008d08
+S31-DIAG: MR4 raw=0x00000540
+S31-DIAG: MR8 raw=0x00000005
+S31-DIAG: MR2 raw=0x0000a0dd
+S31-DIAG: mode register done size=16777216
+S31-DIAG: AXI config done
+Trying to boot from NOR
+OpenSBI: ESP32-S31 firmware active
+
+
+U-Boot 2024.07 (Nov 24 2026 - 23:14:47 -0300)
+
+DRAM:  320 KiB (effective 16.3 MiB)
+Core:  8 devices, 6 uclasses, devicetree: board
+Loading Environment from nowhere... OK
+In:    serial@2038A000
+Out:   serial@2038A000
+Err:   serial@2038A000
+ESP32-S31 U-Boot active
+Hit any key to stop autoboot:  2  1  0
+## Flattened Device Tree blob at 40200000
+   Booting using the fdt blob at 0x40200000
+ERROR: reserving fdt memory region failed (addr=2f030000 size=40000 flags=4)
+   Loading Device Tree to 50ffa000, end 50fff4cb ... OK
+
+Starting kernel ...
+
+[    0.000000] Booting Linux on hartid 0
+[    0.000000] Linux version 6.18.0 (gnfranco@orion) (riscv64-esp-linux-musl-gcc (esp-linux-14.1.1_20260922) 14.1.1 20240710, GNU ld (esp-linux-14.1.1_20260922) 2.42.0.20240618) #1 SMP Tue Nov 24 17:36:33 -03 2026
+[    0.000000] Machine model: Espressif ESP32-S31-Function-CoreBoard-1
+[    0.000000] SBI specification v2.0 detected
+[    0.000000] SBI implementation ID=0x1 Version=0x10006
+[    0.000000] SBI TIME extension detected
+[    0.000000] SBI IPI extension detected
+[    0.000000] SBI RFENCE extension detected
+[    0.000000] SBI SRST extension detected
+[    0.000000] SBI DBCN extension detected
+[    0.000000] earlycon: sbi0 at I/O port 0x0 (options '')
+[    0.000000] printk: legacy bootconsole [sbi0] enabled
+[    0.000000] Reserved memory: created DMA memory pool at 0x2f030000, size 0 MiB
+[    0.000000] OF: reserved mem: initialized node dma-pool@2f030000, compatible id shared-dma-pool
+[    0.000000] OF: reserved mem: 0x2f030000..0x2f06ffff (256 KiB) nomap non-reusable dma-pool@2f030000
+[    0.000000] Zone ranges:
+[    0.000000]   Normal   [mem 0x0000000050000000-0x0000000050ffffff]
+[    0.000000] Movable zone start for each node
+[    0.000000] Early memory node ranges
+[    0.000000]   node   0: [mem 0x0000000050000000-0x0000000050ffffff]
+[    0.000000] Initmem setup node 0 [mem 0x0000000050000000-0x0000000050ffffff]
+[    0.000000] On node 0, zone Normal: 28672 pages in unavailable ranges
+[    0.000000] SBI HSM extension detected
+[    0.000000] riscv: base ISA extensions acim
+[    0.000000] riscv: ELF capabilities acim
+[    0.000000] Ticket spinlock: enabled
+[    0.000000] percpu: Embedded 11 pages/cpu s21952 r0 d23104 u45056
+[    0.000000] Kernel command line: earlycon=sbi console=ttyS0 root=mtd:rootfs rootfstype=cramfs ro swiotlb=128
+[    0.000000] printk: log buffer data + meta data: 16384 + 51200 = 67584 bytes
+[    0.000000] Dentry cache hash table entries: 2048 (order: 1, 8192 bytes, linear)
+[    0.000000] Inode-cache hash table entries: 1024 (order: 0, 4096 bytes, linear)
+[    0.000000] software IO TLB: area num 2.
+[    0.000000] software IO TLB: SWIOTLB bounce buffer size roundup to 0MB
+[    0.000000] software IO TLB: mapped [mem 0x50f59000-0x50fd9000] (0MB)
+[    0.000000] Built 1 zonelists, mobility grouping on.  Total pages: 4096
+[    0.000000] mem auto-init: stack:all(zero), heap alloc:off, heap free:off
+[    0.000000] SLUB: HWalign=64, Order=0-1, MinObjects=0, CPUs=2, Nodes=1
+[    0.000000] rcu: Hierarchical RCU implementation.
+[    0.000000] rcu: 	RCU event tracing is enabled.
+[    0.000000] rcu: RCU calculated value of scheduler-enlistment delay is 25 jiffies.
+[    0.000000] NR_IRQS: 64, nr_irqs: 64, preallocated irqs: 0
+[    0.000000] riscv-intc: 32 local interrupts mapped
+[    0.000000] riscv-intc: 16 custom local interrupts mapped
+[    0.000000] esp-clic: 32 external slots (IDs 16-47), chained on /cpus/cpu@0/interrupt-controller
+[    0.000000] esp-intmtx: 128 sources, parent /soc/interrupt-controller@10a00000; 32 CLIC slots available, 2 windows
+[    0.000000] irq_esp_ipi: IPIs on the CPU_FROM_CPU doorbells, irq 1
+[    0.000000] rcu: srcu_init: Setting srcu_struct sizes based on contention.
+[    0.000000] clocksource: riscv_clocksource: mask: 0xffffffffffffffff max_cycles: 0x49cd42e204, max_idle_ns: 440795202125 ns
+[    0.000000] clocksource: esp32s31-systimer: mask: 0xfffffffffffff max_cycles: 0x3b0a9be80, max_idle_ns: 440795202120 ns
+[    0.000023] sched_clock: 52 bits at 16MHz, resolution 62ns, wraps every 2199023255531ns
+[    0.007916] esp32s31-systimer: 16000000 Hz clocksource+clockevent, irq 11
+[    0.015607] Calibrating delay loop (skipped), value calculated using timer frequency.. 640.00 BogoMIPS (lpj=1280000)
+[    0.025542] pid_max: default: 4096 minimum: 301
+[    0.031447] Mount-cache hash table entries: 1024 (order: 0, 4096 bytes, linear)
+[    0.037559] Mountpoint-cache hash table entries: 1024 (order: 0, 4096 bytes, linear)
+[    0.074617] ASID allocator using 9 bits (512 entries)
+[    0.078906] rcu: Hierarchical SRCU implementation.
+[    0.079278] rcu: 	Max phase no-delay instances is 1000.
+[    0.095108] smp: Bringing up secondary CPUs ...
+[    0.115523] smp: Brought up 1 node, 2 CPUs
+[    0.117760] Memory: 13976K/16384K available (2435K kernel code, 133K rwdata, 408K rodata, 133K init, 100K bss, 2000K reserved, 0K cma-reserved)
+[    0.134571] devtmpfs: initialized
+[    0.164900] DMA: default coherent area is set
+[    0.165340] clocksource: jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 7645041785100000 ns
+[    0.168906] posixtimers hash table entries: 512 (order: 0, 4096 bytes, linear)
+[    0.175908] futex hash table entries: 16 (1024 bytes on 1 NUMA nodes, total 1 KiB, linear).
+[    0.184881] pinctrl core: initialized pinctrl subsystem
+[    0.198378] NET: Registered PF_NETLINK/PF_ROUTE protocol family
+[    0.209442] esp32s31-cache: DMA cache ops registered via vendor SBI ecall
+[    0.295708] usbcore: registered new interface driver usbfs
+[    0.297313] usbcore: registered new interface driver hub
+[    0.298311] usbcore: registered new device driver usb
+[    0.302321] pps_core: LinuxPPS API ver. 1 registered
+[    0.306016] pps_core: Software ver. 5.3.6 - Copyright 2005-2007 Rodolfo Giometti <giometti@linux.it>
+[    0.315417] PTP clock support registered
+[    0.334743] clocksource: Switched to clocksource esp32s31-systimer
+[    0.422036] workingset: timestamp_bits=30 max_order=12 bucket_order=0
+[    0.428239] io scheduler mq-deadline registered
+[    0.428663] io scheduler kyber registered
+[    0.428960] io scheduler bfq registered
+[    0.468116] esp32s31-clk 20587000.syscon:clock-controller: esp clk provider registered (22 clocks)
+[    0.487893] 2038a000.serial: ttyS0 at MMIO 0x2038a000 (irq = 14, base_baud = 2500000) is a ESP32S3 UART
+[    0.488832] printk: legacy console [ttyS0] enabled
+[    0.488832] printk: legacy console [ttyS0] enabled
+[    0.496625] printk: legacy bootconsole [sbi0] disabled
+[    0.496625] printk: legacy bootconsole [sbi0] disabled
+[    0.526249] physmap-flash 40b00000.flash: physmap platform flash device: [mem 0x40b00000-0x40efffff]
+[    0.562037] Synopsys Designware Multimedia Card Interface Driver
+[    0.683558] clk: Disabling unused clocks
+[    0.688812] check access for rdinit=/init failed: -2, ignoring
+[    0.692481] cramfs: checking physical address 0x40b00000 for linear cramfs image
+[    0.692912] cramfs: linear cramfs image on mtd:rootfs appears to be 3420 KB in size
+[    0.700751] VFS: Mounted root (cramfs filesystem) readonly on device 31:0.
+[    0.708945] devtmpfs: mounted
+[    0.711359] Freeing unused kernel image (initmem) memory: 24K
+[    0.714818] This architecture does not have kernel memory protection.
+[    0.721366] Run /sbin/init as init process
+ip: socket: Address family not supported by protocol
+Starting ESP Linux example: hello-world
+Hello, ESP Linux!
+
+ ~ #  
