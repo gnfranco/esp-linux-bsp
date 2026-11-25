@@ -93,5 +93,30 @@
     "Rootfs manual tmpfs initialization required; no production release.",
     "TKIP draft contains checkpatch style warnings.",
     "Release archive schema does not identify experimental profiles; do not publish them as standard release inputs."
-  ]
+  ],
+  "followup_quality": {
+    "no_idf_eap_mixed_wpa2": {
+      "association": "PASS",
+      "dhcp": "PASS",
+      "gateway_icmp": "5/5",
+      "radio_sha256": "81e8e02a8136f4ae3683493250e69ef8ae3990a43d260b1522799910ad3c99fd"
+    },
+    "rebuilt_combo_mixed_wpa2": {
+      "association": "PASS",
+      "dhcp": "PASS",
+      "gateway_icmp": "5/5",
+      "post_hci_attempt_icmp": "10/10",
+      "hci_reset": "INCONCLUSIVE; no valid command complete event",
+      "radio_sha256": "92c888ee18fee84ddd065b62029e783a04e7e0c284518ee8b0ef2c3afb2de87a"
+    },
+    "pairwise_tkip": "AP rejected association status 18; HT disabled by mac80211; no data-plane validation",
+    "restore": "Wi-Fi-only radio slot flash hash verified; boot not rechecked after final restoration",
+    "evidence_sha256": {
+      "no-eap-wpa.log": "eb8a636b28f012c5de01b41b8b48589f25a405a5f2d0894851cde7509b90176e",
+      "combo-wpa.log": "f8bb364a5da1de1a5b7fbfab2cbfe9769583c258d85491f843834d14ff973c67",
+      "pairwise-tkip.log": "375e570679de67e499e8361caf1fa344542f39f857f92444ffa45e041ebbf2fb",
+      "restore-after-no-eap.log": "0fbadef160c9e0f81c5e261bbcb769fc3fbaac7c884125911dd89f54264e64cb",
+      "restore-after-combo.log": "3f8fd1b32ff0cc9d6c3c00c163db334a599ee7ed62b7bab1808dd017c486b610"
+    }
+  }
 }

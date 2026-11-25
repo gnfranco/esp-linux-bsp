@@ -23,3 +23,12 @@ Apply `0002-radio-wifi-only.patch` on the producer base in the manifest using `g
 Restore the locally preserved pre-TKIP rootfs and Wi-Fi-only radio slot using the verified checkpoint, respecting the community flash layout, not the vendor map. The original kernel and DTB are also preserved. The local rootfs requires manual tmpfs initialization and radio start. No credentials, raw network logs, device-specific backups, proprietary payloads or binaries are included here. Review the radio licensing notice before any distribution. The kernel patch retains GPL-2.0-only licensing. Producer source patches retain their upstream licensing.
 
 Upstream kernel review: https://github.com/GrieferPig/linux-esp32-s31/pull/3 (draft; style warnings and untested features are explicit merge gates).
+
+## Follow-up hardware quality tests
+
+- The 646,432-byte no-IDF-EAP payload completed mixed-cipher WPA2-PSK association, DHCP and 5/5 gateway ICMP responses. Enterprise authentication itself remains untested.
+- The rebuilt combined radio (SHA-256 `92c888ee18fee84ddd065b62029e783a04e7e0c284518ee8b0ef2c3afb2de87a`) completed mixed-cipher WPA2, DHCP and 5/5 gateway ICMP responses, followed by 10/10 1,000-byte-payload pings after a Bluetooth HCI probe. The HCI probe yielded no valid command-complete event; Bluetooth functionality and coexistence are not yet validated.
+- Forcing pairwise TKIP produced association status 18 with HT disabled, as expected from mac80211 legacy restrictions. No workaround bypassing those restrictions was applied.
+- The Wi-Fi-only radio slot was restored and flash verification succeeded after both experiments. The final post-restore boot was not independently checked. HTTP/throughput and periodic group rekey remain unvalidated.
+
+Raw private network logs remain local; the manifest records their hashes and sanitized outcomes only.
