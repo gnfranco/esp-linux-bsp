@@ -1,0 +1,289 @@
+From d4f9210f0d4a782e0fed0f923f57e92aa1a399fe Mon Sep 17 00:00:00 2001
+From: Glauber Franco <776952+gnfranco@users.noreply.github.com>
+Date: Wed, 25 Nov 2026 00:02:26 -0300
+Subject: [PATCH] experiment: ESP32-S31 single WS2812 RMT LED class driver
+
+---
+ .../esp32s31-function-core-board-1.dts        |  12 ++
+ arch/riscv/boot/dts/espressif/esp32s31.dtsi   |  14 ++
+ drivers/leds/rgb/Kconfig                      |   6 +
+ drivers/leds/rgb/Makefile                     |   2 +
+ drivers/leds/rgb/leds-esp32s31-rmt.c          | 162 ++++++++++++++++++
+ drivers/pinctrl/espressif/pinctrl-esp32s31.c  |   1 +
+ include/dt-bindings/pinctrl/esp32s31-iomux.h  |   2 +
+ 7 files changed, 199 insertions(+)
+ create mode 100644 drivers/leds/rgb/leds-esp32s31-rmt.c
+
+diff --git a/arch/riscv/boot/dts/espressif/esp32s31-function-core-board-1.dts b/arch/riscv/boot/dts/espressif/esp32s31-function-core-board-1.dts
+index 9d355e5dd..9c8f4e7ab 100644
+--- a/arch/riscv/boot/dts/espressif/esp32s31-function-core-board-1.dts
++++ b/arch/riscv/boot/dts/espressif/esp32s31-function-core-board-1.dts
+@@ -25,6 +25,12 @@ aliases {
+ };
+ 
+ &espfunc {
++	rgb_pins: rgb-pins {
++		pinmux = <ESP_PINMUX(60, ESP_FUNC_S31_RMT_TX0_ID)>;
++		bias-disable;
++		drive-strength = <10>;
++	};
++
+ 	/* I2C0: SDA on GPIO51 and SCL on GPIO50. */
+ 	i2c0_pins: i2c0-pins {
+ 		pinmux = <ESP_PINMUX(51, ESP_FUNC_S31_I2C0_SDA_ID)>,
+@@ -124,3 +130,9 @@ phy0: ethernet-phy@0 {
+ &usb {
+ 	status = "okay";
+ };
++
++&rmt {
++	pinctrl-names = "default";
++	pinctrl-0 = <&rgb_pins>;
++	status = "okay";
++};
+diff --git a/arch/riscv/boot/dts/espressif/esp32s31.dtsi b/arch/riscv/boot/dts/espressif/esp32s31.dtsi
+index 563118ab8..c7c51b9c9 100644
+--- a/arch/riscv/boot/dts/espressif/esp32s31.dtsi
++++ b/arch/riscv/boot/dts/espressif/esp32s31.dtsi
+@@ -204,6 +204,20 @@ sdmmc: mmc@20342000 {
+ 			status = "disabled";
+ 		};
+ 
++		hp_sys: syscon@20586000 {
++			compatible = "esp,esp32s31-hp-system", "syscon";
++			reg = <0x20586000 0x400>;
++		};
++
++		rmt: led-controller@20355000 {
++			compatible = "esp,esp32s31-rmt-ws2812";
++			reg = <0x20355000 0x1000>;
++			esp,clkrst = <&sysctl>;
++			esp,hp-system = <&hp_sys>;
++			clocks = <&xtal_clk>;
++			status = "disabled";
++		};
++
+ 		/*
+ 		 * HP_SYS_CLKRST. Peripheral clock gates and resets that sit
+ 		 * outside the peripherals' own register windows.
+diff --git a/drivers/leds/rgb/Kconfig b/drivers/leds/rgb/Kconfig
+index 222d943d8..c9a756424 100644
+--- a/drivers/leds/rgb/Kconfig
++++ b/drivers/leds/rgb/Kconfig
+@@ -2,6 +2,12 @@
+ 
+ if LEDS_CLASS_MULTICOLOR
+ 
++config LEDS_ESP32S31_RMT
++	bool "Experimental ESP32-S31 RMT WS2812 LED"
++	depends on ARCH_ESPRESSIF && OF && MFD_SYSCON
++	help
++	  Single addressable RGB LED on RMT channel zero. Experimental.
++
+ config LEDS_GROUP_MULTICOLOR
+ 	tristate "LEDs group multi-color support"
+ 	depends on OF
+diff --git a/drivers/leds/rgb/Makefile b/drivers/leds/rgb/Makefile
+index a501fd27f..0234ae0c5 100644
+--- a/drivers/leds/rgb/Makefile
++++ b/drivers/leds/rgb/Makefile
+@@ -6,3 +6,5 @@ obj-$(CONFIG_LEDS_NCP5623)		+= leds-ncp5623.o
+ obj-$(CONFIG_LEDS_PWM_MULTICOLOR)	+= leds-pwm-multicolor.o
+ obj-$(CONFIG_LEDS_QCOM_LPG)		+= leds-qcom-lpg.o
+ obj-$(CONFIG_LEDS_MT6370_RGB)		+= leds-mt6370-rgb.o
++
++obj-$(CONFIG_LEDS_ESP32S31_RMT) += leds-esp32s31-rmt.o
+diff --git a/drivers/leds/rgb/leds-esp32s31-rmt.c b/drivers/leds/rgb/leds-esp32s31-rmt.c
+new file mode 100644
+index 000000000..5c6b994ee
+--- /dev/null
++++ b/drivers/leds/rgb/leds-esp32s31-rmt.c
+@@ -0,0 +1,162 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/* Experimental ESP32-S31 single WS2812 on RMT TX channel 0. */
++#include <linux/bitfield.h>
++#include <linux/clk.h>
++#include <linux/delay.h>
++#include <linux/io.h>
++#include <linux/iopoll.h>
++#include <linux/led-class-multicolor.h>
++#include <linux/mfd/syscon.h>
++#include <linux/mod_devicetable.h>
++#include <linux/module.h>
++#include <linux/mutex.h>
++#include <linux/platform_device.h>
++#include <linux/regmap.h>
++#include <dt-bindings/leds/common.h>
++
++#define RMT_CONF 0x20
++#define RMT_STATUS 0x50
++#define RMT_RAW 0x70
++#define RMT_ENABLE 0x78
++#define RMT_CLEAR 0x7c
++#define RMT_SYS 0xc0
++#define RMT_REF_RST 0xc8
++#define RMT_RAM 0x800
++#define RMT_CLK_CTRL 0xbc
++#define RMT_MEM_LP 0x204
++#define RMT_CLK_MASK (BIT(0) | BIT(1) | GENMASK(29, 3))
++#define RMT_CLK_ON (BIT(0) | BIT(5))
++#define RMT_IDLE_EN BIT(6)
++#define RMT_UPDATE BIT(24)
++#define RMT_TX_START BIT(0)
++#define RMT_TX_END BIT(0)
++#define RMT_TICK_HZ 10000000
++
++struct s31_rgb {
++ void __iomem *base;
++ struct device *dev;
++ struct regmap *clkrst, *hp;
++ struct led_classdev_mc mc;
++ struct mc_subled colors[3];
++ struct mutex lock;
++ u32 conf, old_clk, old_lp;
++};
++
++static int s31_send(struct s31_rgb *rgb, u32 grb)
++{
++ void __iomem *b = rgb->base;
++ u32 v;
++ int i, ret;
++ writel(rgb->conf | BIT(1) | BIT(2), b + RMT_CONF);
++ writel(rgb->conf, b + RMT_CONF);
++ writel(RMT_TX_END, b + RMT_CLEAR);
++ for (i = 0; i < 24; i++) {
++  bool one = grb & BIT(23 - i);
++  u32 hi = one ? 8 : 4, lo = one ? 5 : 9;
++  writel(hi | BIT(15) | (lo << 16), b + RMT_RAM + i * 4);
++ }
++ /* 100 us low reset/latch; zero duration terminates TX. */
++ writel(500 | (500 << 16), b + RMT_RAM + 24 * 4);
++ writel(0, b + RMT_RAM + 25 * 4);
++ writel(rgb->conf | RMT_UPDATE, b + RMT_CONF);
++ writel(rgb->conf | RMT_TX_START, b + RMT_CONF);
++ ret = readl_poll_timeout(b + RMT_RAW, v, v & RMT_TX_END, 10, 20000);
++ if (ret) {
++  dev_err_ratelimited(rgb->dev, "TX timeout raw=%08x status=%08x conf=%08x\n", v, readl(b + RMT_STATUS), readl(b + RMT_CONF));
++  writel(rgb->conf | BIT(7) | RMT_UPDATE, b + RMT_CONF);
++  return ret;
++ }
++ writel(RMT_TX_END, b + RMT_CLEAR);
++ return 0;
++}
++
++static int s31_set(struct led_classdev *cdev, enum led_brightness brightness)
++{
++ struct s31_rgb *rgb = container_of(lcdev_to_mccdev(cdev), struct s31_rgb, mc);
++ u32 grb;
++ int ret;
++ mutex_lock(&rgb->lock);
++ led_mc_calc_color_components(&rgb->mc, brightness);
++ grb = (rgb->colors[1].brightness << 16) | (rgb->colors[0].brightness << 8) | rgb->colors[2].brightness;
++ ret = s31_send(rgb, grb);
++ mutex_unlock(&rgb->lock);
++ return ret;
++}
++
++static void s31_restore(void *data)
++{
++ struct s31_rgb *rgb = data;
++ regmap_update_bits(rgb->hp, RMT_MEM_LP, BIT(2) | BIT(3), rgb->old_lp);
++ regmap_update_bits(rgb->clkrst, RMT_CLK_CTRL, RMT_CLK_MASK, rgb->old_clk);
++}
++
++static int s31_probe(struct platform_device *pdev)
++{
++ struct device *dev = &pdev->dev;
++ struct s31_rgb *rgb;
++ struct clk *xtal;
++ unsigned long rate;
++ unsigned int actual;
++ int ret;
++ rgb = devm_kzalloc(dev, sizeof(*rgb), GFP_KERNEL);
++ if (!rgb) return -ENOMEM;
++ rgb->dev = dev;
++ mutex_init(&rgb->lock);
++ rgb->base = devm_platform_ioremap_resource(pdev, 0);
++ if (IS_ERR(rgb->base)) return PTR_ERR(rgb->base);
++ rgb->clkrst = syscon_regmap_lookup_by_phandle(dev->of_node, "esp,clkrst");
++ if (IS_ERR(rgb->clkrst)) return PTR_ERR(rgb->clkrst);
++ rgb->hp = syscon_regmap_lookup_by_phandle(dev->of_node, "esp,hp-system");
++ if (IS_ERR(rgb->hp)) return PTR_ERR(rgb->hp);
++ xtal = devm_clk_get_enabled(dev, NULL);
++ if (IS_ERR(xtal)) return PTR_ERR(xtal);
++ rate = clk_get_rate(xtal);
++ if (!rate || rate % RMT_TICK_HZ || rate / RMT_TICK_HZ > 255) return -EINVAL;
++ rgb->conf = RMT_IDLE_EN | ((rate / RMT_TICK_HZ) << 8) | BIT(16);
++ ret = regmap_read(rgb->clkrst, RMT_CLK_CTRL, &rgb->old_clk);
++ if (ret) return ret;
++ ret = regmap_read(rgb->hp, RMT_MEM_LP, &rgb->old_lp);
++ if (ret) return ret;
++ ret = devm_add_action_or_reset(dev, s31_restore, rgb);
++ if (ret) return ret;
++ ret = regmap_update_bits(rgb->clkrst, RMT_CLK_CTRL, RMT_CLK_MASK, RMT_CLK_ON);
++ if (ret) return ret;
++ ret = regmap_update_bits(rgb->clkrst, RMT_CLK_CTRL, BIT(1), BIT(1));
++ if (ret) return ret;
++ udelay(2);
++ ret = regmap_update_bits(rgb->clkrst, RMT_CLK_CTRL, BIT(1), 0);
++ if (ret) return ret;
++ ret = regmap_update_bits(rgb->hp, RMT_MEM_LP, BIT(2) | BIT(3), BIT(3));
++ if (ret) return ret;
++ ret = regmap_read(rgb->clkrst, RMT_CLK_CTRL, &actual);
++ if (ret) return ret;
++ if ((actual & RMT_CLK_MASK) != RMT_CLK_ON) return dev_err_probe(dev, -EIO, "RMT clock readback %08x\n", actual);
++ writel(readl(rgb->base + RMT_SYS) | BIT(0) | BIT(1), rgb->base + RMT_SYS);
++ writel(0, rgb->base + RMT_ENABLE);
++ writel(BIT(0), rgb->base + RMT_REF_RST);
++ dev_info(dev, "RMT clock=%08x sys=%08x xtal=%lu\n", actual, readl(rgb->base + RMT_SYS), rate);
++ ret = s31_send(rgb, 0);
++ if (ret) return dev_err_probe(dev, ret, "initial RMT transfer failed\n");
++ rgb->colors[0].color_index = LED_COLOR_ID_RED;
++ rgb->colors[1].color_index = LED_COLOR_ID_GREEN;
++ rgb->colors[2].color_index = LED_COLOR_ID_BLUE;
++ rgb->colors[0].intensity = rgb->colors[1].intensity = rgb->colors[2].intensity = 255;
++ rgb->mc.num_colors = 3;
++ rgb->mc.subled_info = rgb->colors;
++ rgb->mc.led_cdev.name = "s31:rgb:status";
++ rgb->mc.led_cdev.max_brightness = 255;
++ rgb->mc.led_cdev.brightness_set_blocking = s31_set;
++ ret = devm_led_classdev_multicolor_register(dev, &rgb->mc);
++ if (!ret) dev_info(dev, "WS2812 RMT TX ready\n");
++ return ret;
++}
++static const struct of_device_id s31_of_match[] = {
++ { .compatible = "esp,esp32s31-rmt-ws2812" }, { }
++};
++MODULE_DEVICE_TABLE(of, s31_of_match);
++static struct platform_driver s31_driver = {
++ .probe = s31_probe,
++ .driver = { .name = "esp32s31-rmt-ws2812", .of_match_table = s31_of_match },
++};
++module_platform_driver(s31_driver);
++MODULE_LICENSE("GPL");
+diff --git a/drivers/pinctrl/espressif/pinctrl-esp32s31.c b/drivers/pinctrl/espressif/pinctrl-esp32s31.c
+index 07b9d317e..54e17c51e 100644
+--- a/drivers/pinctrl/espressif/pinctrl-esp32s31.c
++++ b/drivers/pinctrl/espressif/pinctrl-esp32s31.c
+@@ -242,6 +242,7 @@ static const struct esp_pin_function esp32s31_functions[] = {
+ 	[ESP_FUNC_S31_SDMMC_ID] = { ESP_FUNC_NONE, ESP_FUNC_NONE,
+ 				    ESP_FUNC_NONE,
+ 				    ESP_OWNER(S31_OWNER_CNNT_SDIO) },
++	[ESP_FUNC_S31_RMT_TX0_ID] = { GPIO_FUNC_GPIO, ESP_FUNC_NONE, RMT_SIG_OUT0_IDX },
+ };
+ 
+ static int esp_s31_matrix_set_in(struct esp_pinctrl *epctl, u32 gpio, u32 signal)
+diff --git a/include/dt-bindings/pinctrl/esp32s31-iomux.h b/include/dt-bindings/pinctrl/esp32s31-iomux.h
+index b61d97b7f..d73bd491f 100644
+--- a/include/dt-bindings/pinctrl/esp32s31-iomux.h
++++ b/include/dt-bindings/pinctrl/esp32s31-iomux.h
+@@ -594,4 +594,6 @@
+ /* SDMMC slot 0 reaches GPIO20-25 through the CNNT dedicated pad path. */
+ #define ESP_FUNC_S31_SDMMC_ID				39
+ 
++#define ESP_FUNC_S31_RMT_TX0_ID			40
++
+ #endif /* ESP32S31_IOMUX_H */
+-- 
+2.43.0
+
