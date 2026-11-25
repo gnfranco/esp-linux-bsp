@@ -1,0 +1,11 @@
+[    0.000000] Linux version 6.18.0+ (gnfranco@orion) (riscv64-esp-linux-musl-gcc (esp-linux-14.1.1_20260922) 14.1.1 20240710, GNU ld (esp-linux-14.1.1_20260922) 2.42.0.20240618) #2 SMP Wed Nov 25 00:02:06 -03 2026
+[    0.113499] smp: Brought up 1 node, 2 CPUs
+[    0.544280] esp32s31-reset 20587000.syscon:reset-controller: ESP32-S31 reset provider registered
+[    0.780395] pinctrl 20582000.pinctrl: esp32s31 pinctrl ready: 62 pins
+[    0.824206] esp32s31-rmt-ws2812 20355000.led-controller: RMT clock=00000021 sys=05000013 xtal=40000000
+[    0.827793] esp32s31-rmt-ws2812 20355000.led-controller: WS2812 RMT TX ready
+[    1.556877] dwc2 20300000.usb: new USB bus registered, assigned bus number 1
+[    1.624456] esp-i2c 20385000.i2c: ESP I2C adapter registered at (ptrval), 100000 Hz, IRQ 24
+[    1.659323] dwmmc_esp32s31 20342000.mmc: DW MMC controller at irq 26,32 bit host data width,512 deep fifo
+
+Operator confirmed physical color changes and smooth spectral fade.
