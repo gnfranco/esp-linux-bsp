@@ -1,5 +1,7 @@
 # ESP32-S31 peripheral bring-up (experimental)
 
+> Historical record. For the current patch series use [BASELINE-20261125.md](BASELINE-20261125.md). Earlier patch files and results remain available at tag `s31-rmt-v1.1.0`.
+
 Base: BSP a308b54; Linux 7fdbad0c5; Buildroot external de2f5a6.
 Do not replace the known-good full flash image or merge into integration until hardware validation.
 

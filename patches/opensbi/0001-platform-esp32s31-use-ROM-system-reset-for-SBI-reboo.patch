@@ -1,0 +1,66 @@
+From 0940d8a5834d02b93e2be0e60ef6505767862875 Mon Sep 17 00:00:00 2001
+From: Glauber Franco <gnfranco@gmail.com>
+Date: Wed, 25 Nov 2026 14:31:44 -0300
+Subject: [PATCH] platform: esp32s31: use ROM system reset for SBI reboot
+
+The existing reset handler writes the HP0 reset-control register,
+which only requests a CPU reset and overwrites other fields. On the
+ESP32-S31 Function-CoreBoard-1 rev 0.0, Linux reboot did not return
+to the bootloader. Use the ROM software_reset entry documented in
+ESP-IDF instead, and do not advertise an unimplemented shutdown.
+
+Hardware validation: three experimental and ten final reboot cycles
+(five forced and five normal on the final revision). All returned to
+Linux with SW_SYS_RESET, 16 MiB PSRAM and two CPUs.
+
+Developed with assistance from ChatGPT (OpenAI).
+
+Signed-off-by: Glauber Franco <gnfranco@gmail.com>
+---
+ platform/generic/espressif/esp32s31/esp32s31.c | 16 +++++++---------
+ 1 file changed, 7 insertions(+), 9 deletions(-)
+
+diff --git a/platform/generic/espressif/esp32s31/esp32s31.c b/platform/generic/espressif/esp32s31/esp32s31.c
+index f108f3f..d4260b1 100644
+--- a/platform/generic/espressif/esp32s31/esp32s31.c
++++ b/platform/generic/espressif/esp32s31/esp32s31.c
+@@ -51,29 +51,27 @@
+ /* Slack over the source dtb for the generic platform's in-place fixups. */
+ #define S31_FIXUP_FDT_SIZE	0x3000
+ 
+-/* LP_AONCLKRST_HPCORE0_RESET_CTRL_REG @ 0x2070103C — bit 20 is the
+- * write-to-trigger HP core 0 software reset, used to service SBI
+- * shutdown / reboot requests. */
+-#define LP_AONCLKRST_HPCORE0_RESET_CTRL_REG  0x2070103CU
+-#define HPCORE_SW_RESET                      (1U << 20)
++/* ESP32-S31 ROM software_reset entry (ESP-IDF rom.ld). */
++#define S31_ROM_SOFTWARE_RESET 0x2f800094UL
+ 
+ static int s31_system_reset_check(u32 type, u32 reason)
+ {
+ 	switch (type) {
+ 	case SBI_SRST_RESET_TYPE_COLD_REBOOT:
+ 	case SBI_SRST_RESET_TYPE_WARM_REBOOT:
+-	case SBI_SRST_RESET_TYPE_SHUTDOWN:
+ 		return 1;
++	/* No system power-off mechanism is implemented here. */
+ 	}
+ 	return 0;
+ }
+ 
+ static void s31_system_reset(u32 type, u32 reason)
+ {
+-	writel(HPCORE_SW_RESET, (void *)LP_AONCLKRST_HPCORE0_RESET_CTRL_REG);
++	void (*rom_reset)(void) = (void (*)(void))S31_ROM_SOFTWARE_RESET;
++
++	/* Reset the digital system, not only an individual HP core. */
++	rom_reset();
+ 
+-	/* If the reset doesn't take effect (e.g. shutdown on a chip with no
+-	 * power-down path), spin in WFI so we don't return into garbage. */
+ 	while (1)
+ 		__asm__ __volatile__("wfi");
+ }
+-- 
+2.43.0
+

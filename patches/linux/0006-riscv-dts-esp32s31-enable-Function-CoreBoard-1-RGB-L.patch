@@ -1,0 +1,82 @@
+From 83bad1207115e5687c83e10914b0d01bfbcfa088 Mon Sep 17 00:00:00 2001
+From: Glauber Franco <gnfranco@gmail.com>
+Date: Wed, 25 Nov 2026 00:25:28 -0300
+Subject: [PATCH 6/7] riscv: dts: esp32s31: enable Function-CoreBoard-1 RGB LED
+
+Describe the RMT controller and route TX0 to the onboard WS2812 on
+GPIO60.
+
+Developed with assistance from ChatGPT (OpenAI).
+
+Signed-off-by: Glauber Franco <gnfranco@gmail.com>
+---
+ .../esp32s31-function-core-board-1.dts        | 17 ++++++++++++++++
+ arch/riscv/boot/dts/espressif/esp32s31.dtsi   | 20 +++++++++++++++++++
+ 2 files changed, 37 insertions(+)
+
+diff --git a/arch/riscv/boot/dts/espressif/esp32s31-function-core-board-1.dts b/arch/riscv/boot/dts/espressif/esp32s31-function-core-board-1.dts
+index 9d355e5dd..92117157e 100644
+--- a/arch/riscv/boot/dts/espressif/esp32s31-function-core-board-1.dts
++++ b/arch/riscv/boot/dts/espressif/esp32s31-function-core-board-1.dts
+@@ -25,6 +25,12 @@ aliases {
+ };
+ 
+ &espfunc {
++	rgb_pins: rgb-pins {
++		pinmux = <ESP_PINMUX(60, ESP_FUNC_S31_RMT_TX0_ID)>;
++		bias-disable;
++		drive-strength = <10>;
++	};
++
+ 	/* I2C0: SDA on GPIO51 and SCL on GPIO50. */
+ 	i2c0_pins: i2c0-pins {
+ 		pinmux = <ESP_PINMUX(51, ESP_FUNC_S31_I2C0_SDA_ID)>,
+@@ -124,3 +130,14 @@ phy0: ethernet-phy@0 {
+ &usb {
+ 	status = "okay";
+ };
++
++&rmt {
++	status = "okay";
++
++	led@0 {
++		compatible = "esp,esp32s31-rmt-ws2812";
++		reg = <0>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&rgb_pins>;
++	};
++};
+diff --git a/arch/riscv/boot/dts/espressif/esp32s31.dtsi b/arch/riscv/boot/dts/espressif/esp32s31.dtsi
+index 563118ab8..8acea95de 100644
+--- a/arch/riscv/boot/dts/espressif/esp32s31.dtsi
++++ b/arch/riscv/boot/dts/espressif/esp32s31.dtsi
+@@ -204,6 +204,26 @@ sdmmc: mmc@20342000 {
+ 			status = "disabled";
+ 		};
+ 
++		hp_sys: syscon@20586000 {
++			compatible = "esp,esp32s31-hp-system", "syscon";
++			reg = <0x20586000 0x400>;
++		};
++
++		rmt: rmt@20355000 {
++			compatible = "esp,esp32s31-rmt";
++			reg = <0x20355000 0x1000>;
++			esp,hp-system = <&hp_sys>;
++			clocks = <&clk ESP_S31_CLK_RMT_APB>,
++				 <&clk ESP_S31_CLK_RMT>;
++			clock-names = "apb", "rmt";
++			resets = <&rst ESP_S31_RST_RMT>;
++			interrupt-parent = <&intmtx>;
++			interrupts = <22 IRQ_TYPE_LEVEL_HIGH>;
++			#address-cells = <1>;
++			#size-cells = <0>;
++			status = "disabled";
++		};
++
+ 		/*
+ 		 * HP_SYS_CLKRST. Peripheral clock gates and resets that sit
+ 		 * outside the peripherals' own register windows.
+-- 
+2.43.0
+

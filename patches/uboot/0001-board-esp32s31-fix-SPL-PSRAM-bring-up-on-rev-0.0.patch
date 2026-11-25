@@ -1,6 +1,31 @@
+From 7c053400864fbe0e8479a5ab6cebfa57441e906c Mon Sep 17 00:00:00 2001
+From: Glauber Franco <gnfranco@gmail.com>
+Date: Wed, 25 Nov 2026 00:50:31 -0300
+Subject: [PATCH] board: esp32s31: fix SPL PSRAM bring-up on rev 0.0
+
+Enable the modem analog I2C clock and force-on path before MPLL
+calibration. Stop CPLL calibration when complete, bound the MPLL wait
+and stop SPL on PSRAM initialization failure. Use the ESP-IDF-derived
+400/200 MHz initial MPLL/MSPI profile and octal PSRAM latency settings.
+
+Tested on ESP32-S31 Function-CoreBoard-1 rev 0.0 with 16 MiB NOR and
+16 MiB Octal PSRAM. The original SPL stalled; the revised SPL boots
+Linux 6.18 with both CPUs and an interactive shell. The later shared
+MPLL/EMAC clock path requires further validation.
+
+Developed with assistance from ChatGPT (OpenAI).
+
+Signed-off-by: Glauber Franco <gnfranco@gmail.com>
+---
+ board/espressif/esp32s31/spl.c       |  7 ++-
+ board/espressif/esp32s31/spl_psram.c | 79 +++++++++++++++++++++++-----
+ 2 files changed, 71 insertions(+), 15 deletions(-)
+
+diff --git a/board/espressif/esp32s31/spl.c b/board/espressif/esp32s31/spl.c
+index 076759c8..35104870 100644
 --- a/board/espressif/esp32s31/spl.c
 +++ b/board/espressif/esp32s31/spl.c
-@@ -73,8 +73,11 @@
+@@ -73,8 +73,11 @@ void spl_board_init(void)
  	 * safe here because the SPL runs from uncached HP-RAM.
  	 */
  	s31_spl_flash_reconfig_qio();
@@ -14,20 +39,11 @@
  
  	/* Clock-tree bring-up. Order: MPLL (EMAC ref path; psram_init already
  	 * did the PSRAM MPLL) -> CPU 40->320 MHz CPLL -> systimer peripheral
---- a/board/espressif/esp32s31/spl_clk.c
-+++ b/board/espressif/esp32s31/spl_clk.c
-@@ -56,7 +56,7 @@
- #define MSPI_CAL_END                      BIT(8)
- #define MSPI_CAL_STOP                     BIT(9)
- #define HP_SYS_CLKRST_MODEM_CLK_EN        BIT(0)
--#define MODEM_LPCON_CLK_I2C_MST_EN        BIT(2)
-+#define MODEM_LPCON_CLK_I2C_MST_EN        BIT(0)
- #define MODEM_LPCON_CLK_I2C_MST_FO        BIT(2)
- #define MODEM_SYSCON_CLK_I2C_MST_SEL_160M BIT(12)
- 
+diff --git a/board/espressif/esp32s31/spl_psram.c b/board/espressif/esp32s31/spl_psram.c
+index dd4ce8de..6307cb4d 100644
 --- a/board/espressif/esp32s31/spl_psram.c
 +++ b/board/espressif/esp32s31/spl_psram.c
-@@ -102,13 +102,31 @@
+@@ -102,13 +102,31 @@ static void psram_ldo_init(void)
  #define LP_AONCLKRST_MSPI_FB_DIV_S        3
  #define LP_AONCLKRST_MSPI_FB_DIV_M        (0x1FU << LP_AONCLKRST_MSPI_FB_DIV_S)
  
@@ -37,13 +53,13 @@
  
 -static void psram_mpll_init(void)
 +/* S31-FIX: IDF v6.1 bootloader_hardware_init() enables the analog I2C
-+ * master BEFORE MPLL calibration. MODEM_LPCON.clk_i2c_mst_en is BIT(0),
-+ * not BIT(2), per soc/modem_lpcon_struct.h.
++ * master before MPLL calibration. MODEM_LPCON.clk_i2c_mst_en is BIT(2)
++ * per the ESP-IDF modem register definitions.
 + */
 +static void s31_psram_analog_i2c_enable(void)
 +{
 +	setbits_le32((void *)(DR_REG_HP_SYS_CLKRST_BASE + 0x40U), BIT(0));
-+	setbits_le32((void *)(0x2010F000U + 0x18U), BIT(0));
++	setbits_le32((void *)(0x2010F000U + 0x18U), BIT(2));
 +	setbits_le32((void *)(0x2010F000U + 0x1CU), BIT(2));
 +	setbits_le32((void *)(0x20109C00U + 0x04U), BIT(12));
 +	printf("S31-FIX: analog I2C gates: modem=%08x lpcon=%08x force=%08x syscon=%08x\n",
@@ -61,7 +77,7 @@
  
  	/* Power-up sequence. Also brings up CPLL, since nothing earlier
  	 * in this boot flow sets those bits; without them the PMU FSM
-@@ -129,16 +147,37 @@
+@@ -129,16 +147,37 @@ static void psram_mpll_init(void)
  	 */
  	fb_div = PSRAM_MPLL_FREQ_MHZ * (ref_div + 1) / XTAL_FREQ_MHZ - 1;
  
@@ -100,16 +116,24 @@
  }
  
  /*------------------------------------------------------------------------
-@@ -258,7 +297,7 @@
-  * MPLL can run at 500 MHz — required for the EMAC's 125 MHz RGMII
-  * reference (CNNT_HP_EMAC_REF_CTRL.DIV = 3 -> MPLL/4 = 125 MHz).
+@@ -254,11 +293,12 @@ static void psram_pin_init(void)
+ #define AP_OCT_PSRAM_CS_HOLD_TIME         4
+ #define AP_OCT_PSRAM_CS_HOLD_DELAY        3
+ 
+-/* PSRAM speed at init: MPLL (500 MHz) / divisor. Set to 125 MHz so
+- * MPLL can run at 500 MHz — required for the EMAC's 125 MHz RGMII
+- * reference (CNNT_HP_EMAC_REF_CTRL.DIV = 3 -> MPLL/4 = 125 MHz).
++/*
++ * Use the 400 MHz MPLL / 2 profile during initial PSRAM bring-up.
++ * The later EMAC clock initialization may reprogram the shared MPLL;
++ * its interaction with the PSRAM clock still needs validation.
   */
 -#define PSRAM_SPEED_MHZ                   125
 +#define PSRAM_SPEED_MHZ                   200
  #define PSRAM_BUS_FREQ_DIV                (PSRAM_MPLL_FREQ_MHZ / PSRAM_SPEED_MHZ)
  
  static void psram_ctrlr_init(void)
-@@ -374,13 +413,13 @@
+@@ -374,13 +414,13 @@ static void psram_ctrlr_init(void)
  
  #define AP_OCT_PSRAM_REG_READ             0x4040
  #define AP_OCT_PSRAM_REG_WRITE            0xC0C0
@@ -126,7 +150,7 @@
  
  union psram_mr0 {
  	struct {
-@@ -529,11 +568,13 @@
+@@ -529,11 +569,13 @@ static void psram_mode_reg_init(void)
  	 */
  	psram_xact(AP_OCT_PSRAM_REG_READ, 0, NULL, 0, &rx_buf, 16,
  		   AP_OCT_PSRAM_RD_REG_DUMMY_BITLEN);
@@ -140,7 +164,7 @@
  	mr4.val = rx_buf & 0xFF;
  
  	/* Update MR0 latency / drive, then write back. */
-@@ -551,6 +592,7 @@
+@@ -551,6 +593,7 @@ static void psram_mode_reg_init(void)
  	/* Read MR8 (8 bits at addr 8). */
  	psram_xact(AP_OCT_PSRAM_REG_READ, 8, NULL, 0, &rx_buf, 8,
  		   AP_OCT_PSRAM_RD_REG_DUMMY_BITLEN);
@@ -148,7 +172,7 @@
  	mr8.val = rx_buf & 0xFF;
  
  	/* Update MR8 burst length, then write back. */
-@@ -564,6 +606,7 @@
+@@ -564,6 +607,7 @@ static void psram_mode_reg_init(void)
  	/* Read MR2 for density (addr 2 brings MR2 + MR3). */
  	psram_xact(AP_OCT_PSRAM_REG_READ, 2, NULL, 0, &rx_buf, 16,
  		   AP_OCT_PSRAM_RD_REG_DUMMY_BITLEN);
@@ -156,18 +180,18 @@
  	mr2.val = rx_buf & 0xFF;
  
  	switch (mr2.density) {
-@@ -637,8 +680,8 @@
+@@ -637,8 +681,8 @@ static void psram_mode_reg_init(void)
  #define AP_OCT_PSRAM_SYNC_READ            0x0000
  #define AP_OCT_PSRAM_CMD_BITLEN           16
  #define AP_OCT_PSRAM_ADDR_BITLEN          32
 -#define AP_OCT_PSRAM_RD_DUMMY_BITLEN      (2 * (18 - 1))   /* 34 */
 -#define AP_OCT_PSRAM_WR_DUMMY_BITLEN      (2 * (9 - 1))    /* 16 */
-+#define AP_OCT_PSRAM_RD_DUMMY_BITLEN      (2 * (14 - 1))   /* 34 */
-+#define AP_OCT_PSRAM_WR_DUMMY_BITLEN      (2 * (7 - 1))    /* 16 */
++#define AP_OCT_PSRAM_RD_DUMMY_BITLEN      (2 * (14 - 1))   /* 26 */
++#define AP_OCT_PSRAM_WR_DUMMY_BITLEN      (2 * (7 - 1))    /* 12 */
  
  static void psram_axi_config(void)
  {
-@@ -744,13 +787,22 @@
+@@ -744,13 +788,22 @@ static void psram_mmu_map(u32 psram_size_bytes)
  
  int psram_init(void)
  {
@@ -185,9 +209,12 @@
 +	puts("S31-DIAG: controller init done\n");
 +	puts("S31-DIAG: mode register begin\n");
  	psram_mode_reg_init();
-+	printf("S31-DIAG: mode register done size=%u\n", (unsigned)s_psram_size);
++	printf("S31-DIAG: mode register done size=%u\n", (unsigned int)s_psram_size);
  	psram_axi_config();
 +	puts("S31-DIAG: AXI config done\n");
  	if (!s_psram_size)
  		return -1;
  	psram_mmu_map(s_psram_size);
+-- 
+2.43.0
+

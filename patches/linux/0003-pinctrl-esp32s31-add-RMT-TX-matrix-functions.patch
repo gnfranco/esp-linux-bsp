@@ -1,0 +1,32 @@
+From 2a0e63dcd02d8ae71e2d731679371f701f8273fe Mon Sep 17 00:00:00 2001
+From: Glauber Franco <gnfranco@gmail.com>
+Date: Wed, 25 Nov 2026 00:25:28 -0300
+Subject: [PATCH 3/7] pinctrl: esp32s31: add RMT TX matrix functions
+
+Allow board pinctrl states to route the four TX signals.
+
+Developed with assistance from ChatGPT (OpenAI).
+
+Signed-off-by: Glauber Franco <gnfranco@gmail.com>
+---
+ drivers/pinctrl/espressif/pinctrl-esp32s31.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/drivers/pinctrl/espressif/pinctrl-esp32s31.c b/drivers/pinctrl/espressif/pinctrl-esp32s31.c
+index 07b9d317e..e4c49cad9 100644
+--- a/drivers/pinctrl/espressif/pinctrl-esp32s31.c
++++ b/drivers/pinctrl/espressif/pinctrl-esp32s31.c
+@@ -242,6 +242,10 @@ static const struct esp_pin_function esp32s31_functions[] = {
+ 	[ESP_FUNC_S31_SDMMC_ID] = { ESP_FUNC_NONE, ESP_FUNC_NONE,
+ 				    ESP_FUNC_NONE,
+ 				    ESP_OWNER(S31_OWNER_CNNT_SDIO) },
++	[ESP_FUNC_S31_RMT_TX0_ID] = { GPIO_FUNC_GPIO, ESP_FUNC_NONE, RMT_SIG_OUT0_IDX },
++	[ESP_FUNC_S31_RMT_TX1_ID] = { GPIO_FUNC_GPIO, ESP_FUNC_NONE, RMT_SIG_OUT1_IDX },
++	[ESP_FUNC_S31_RMT_TX2_ID] = { GPIO_FUNC_GPIO, ESP_FUNC_NONE, RMT_SIG_OUT2_IDX },
++	[ESP_FUNC_S31_RMT_TX3_ID] = { GPIO_FUNC_GPIO, ESP_FUNC_NONE, RMT_SIG_OUT3_IDX },
+ };
+ 
+ static int esp_s31_matrix_set_in(struct esp_pinctrl *epctl, u32 gpio, u32 signal)
+-- 
+2.43.0
+

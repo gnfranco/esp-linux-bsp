@@ -1,0 +1,114 @@
+From c5675091122c777cae6931a90b6f7576f62c779d Mon Sep 17 00:00:00 2001
+From: Glauber Franco <gnfranco@gmail.com>
+Date: Wed, 25 Nov 2026 00:25:28 -0300
+Subject: [PATCH 2/7] clk: reset: esp32s31: expose RMT clock and reset
+
+Model the APB gate and XTAL-based functional clock and expose the RMT
+reset line.
+
+Developed with assistance from ChatGPT (OpenAI).
+
+Signed-off-by: Glauber Franco <gnfranco@gmail.com>
+---
+ drivers/clk/clk-esp32s31.c     | 26 +++++++++++++++++++++++++-
+ drivers/reset/reset-esp32s31.c |  5 +++++
+ 2 files changed, 30 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/clk/clk-esp32s31.c b/drivers/clk/clk-esp32s31.c
+index a6d4e3b33..0e4187d6e 100644
+--- a/drivers/clk/clk-esp32s31.c
++++ b/drivers/clk/clk-esp32s31.c
+@@ -21,6 +21,7 @@
+ #include <dt-bindings/clock/esp32s31.h>
+ 
+ /* Peripheral control registers in HP_SYS_CLKRST */
++#define ESP32S31_HP_CLKRST_RMT_CTRL0	0x0bc
+ #define ESP32S31_HP_CLKRST_EMAC_CTRL0	0x0c8
+ #define ESP32S31_HP_CLKRST_I2C0_CTRL0	0x0dc
+ #define ESP32S31_HP_CLKRST_I2C1_CTRL0	0x0e0
+@@ -117,6 +118,7 @@ struct esp_clk_desc {
+ 	u8 map_idx;
+ 	u32 reg;
+ 	u32 gate;
++	u32 prepare_clear;
+ 	u32 div;
+ 	u32 frac;
+ 	u32 mux;
+@@ -280,7 +282,8 @@ static int esp_clk_prepare(struct clk_hw *hw)
+ 	struct esp_clk *esp_clk = to_esp_clk(hw);
+ 
+ 	return regmap_update_bits(esp_clk->map, esp_clk->desc->reg,
+-				  esp_clk->desc->gate, esp_clk->desc->gate);
++				  esp_clk->desc->gate | esp_clk->desc->prepare_clear,
++				  esp_clk->desc->gate);
+ }
+ 
+ static void esp_clk_unprepare(struct clk_hw *hw)
+@@ -423,6 +426,8 @@ static const u16 esp32s31_i2c_parent_ids[] = {
+ 	ESP_S31_CLK_RC_FAST,
+ };
+ 
++static const char * const esp32s31_rmt_parents[] = { "xtal" };
++
+ static const struct esp_clk_desc esp32s31_clk_descs[] = {
+ 	[ESP_S31_CLK_IOMUX_APB] = {
+ 		.name = "iomux_apb",
+@@ -539,6 +544,22 @@ static const struct esp_clk_desc esp32s31_clk_descs[] = {
+ 		.parent_ids = esp32s31_apb_parent_ids,
+ 		.num_parents = ARRAY_SIZE(esp32s31_apb_parent_ids),
+ 	},
++	[ESP_S31_CLK_RMT_APB] = {
++		.name = "rmt_apb",
++		.reg = ESP32S31_HP_CLKRST_RMT_CTRL0,
++		.gate = BIT(0),
++		.parent_ids = esp32s31_apb_parent_ids,
++		.num_parents = ARRAY_SIZE(esp32s31_apb_parent_ids),
++	},
++	[ESP_S31_CLK_RMT] = {
++		.name = "rmt",
++		.reg = ESP32S31_HP_CLKRST_RMT_CTRL0,
++		.gate = BIT(5),
++		/* Model only XTAL / 1 until other sources are validated. */
++		.prepare_clear = GENMASK(4, 3) | GENMASK(29, 6),
++		.parents = esp32s31_rmt_parents,
++		.num_parents = ARRAY_SIZE(esp32s31_rmt_parents),
++	},
+ };
+ 
+ static const struct clk_ops *esp_clk_pick_ops(const struct esp_clk_desc *desc)
+@@ -736,6 +757,9 @@ static int esp_clk_probe(struct platform_device *pdev)
+ 		struct clk_init_data init = { };
+ 		struct esp_clk *esp_clk;
+ 
++		if (!desc->name)
++			continue;
++
+ 		esp_clk = devm_kzalloc(dev, sizeof(*esp_clk), GFP_KERNEL);
+ 		if (!esp_clk)
+ 			return -ENOMEM;
+diff --git a/drivers/reset/reset-esp32s31.c b/drivers/reset/reset-esp32s31.c
+index c7a3aee44..dcc696600 100644
+--- a/drivers/reset/reset-esp32s31.c
++++ b/drivers/reset/reset-esp32s31.c
+@@ -17,6 +17,7 @@
+ #include <dt-bindings/reset/esp32s31.h>
+ 
+ /* Peripheral control registers in HP_SYS_CLKRST */
++#define ESP32S31_HP_CLKRST_RMT_CTRL0	0x0bc
+ #define ESP32S31_HP_CLKRST_I2C0_CTRL0	0x0dc
+ #define ESP32S31_HP_CLKRST_I2C1_CTRL0	0x0e0
+ #define ESP32S31_HP_CLKRST_IOMUX_CTRL0	0x15c
+@@ -89,6 +90,10 @@ static const struct esp_s31_rst_desc esp_s31_rst_descs[ESP_S31_RST_NUM] = {
+ 		.reg = ESP32S31_CNNT_HP_SDMMC_CTRL,
+ 		.mask = ESP32S31_SDMMC_RST_EN,
+ 	},
++	[ESP_S31_RST_RMT] = {
++		.reg = ESP32S31_HP_CLKRST_RMT_CTRL0,
++		.mask = BIT(1),
++	},
+ };
+ 
+ struct esp_s31_reset {
+-- 
+2.43.0
+

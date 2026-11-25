@@ -1,5 +1,7 @@
 # ESP32-S31 RMT driver v1.1.0 (experimental)
 
+> Historical record. For the current patch series use [BASELINE-20261125.md](BASELINE-20261125.md). Earlier patch files and results remain available at tag `s31-rmt-v1.1.0`.
+
 Hardware validation: 2026-11-25, Function-CoreBoard-1, silicon rev 0.0. Linux 6.18.0+, base 7fdbad0c5, v1.0 patch d4f9210f0, v1.1 patch 205d569fd. The BSP integration branch retains both patches in order.
 
 ## Changes

@@ -7,6 +7,10 @@
 This repository contains the image layout and packaging tools used by the
 ESP32-S31 Buildroot integration.
 
+## Validated experimental baseline
+
+See [S31 baseline 2026-11-25](docs/esp32s31/BASELINE-20261125.md) for pinned component revisions, the active patch series and hardware validation. These patches are not yet accepted upstream.
+
 ## Buildroot packaging
 
 Buildroot installs `tools/` and `configs/` as a host package. Its post-image

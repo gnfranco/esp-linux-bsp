@@ -1,5 +1,8 @@
 # ESP32-S31 Function-CoreBoard-1 Linux bring-up - 2026-11-24
 
+> Historical record. For the current patch series use [BASELINE-20261125.md](BASELINE-20261125.md). Earlier patch files and results remain available at tag `s31-rmt-v1.1.0`.
+> Correction: the initial bit-0 MODEM_LPCON claim below was superseded by the verified ESP-IDF bit-2 definition. Do not apply the old SPL patch.
+
 ## Hardware and confirmed result
 - ESP32-S31 revision v0.0, NOR flash 16 MiB and Octal PSRAM 16 MiB
 - ESP-IDF 6.1 independent PSRAM test: 200 MHz; full boot self-test PASS; 2 MiB additional data pattern PASS
