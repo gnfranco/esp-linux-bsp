@@ -1,0 +1,82 @@
+{
+  "schema": 1,
+  "profile": "s31-wifi-community-engineering",
+  "baseline_tag": "s31-validated-20261125",
+  "board": "Function-CoreBoard-1 rev 0.0, 16 MiB NOR, 16 MiB PSRAM",
+  "distribution": "local engineering only; do not publish composite or radio binaries",
+  "reference": {
+    "repo": "https://github.com/GrieferPig/esp32-s31-linux.git",
+    "commit": "f76b1e0d5c0d8e6aedcdcac296a093ea18abbcf9",
+    "release": "ci-f76b1e0d5c0d-40073112647",
+    "assets": {
+      "s31_full_flash.bin": {
+        "size": 13684736,
+        "sha256": "e9577f4482e8df244947d63b6fedf14c2b9db6adf343f2fab2db239bb5bef8cb",
+        "url": "https://github.com/GrieferPig/esp32-s31-linux/releases/download/ci-f76b1e0d5c0d-40073112647/s31_full_flash.bin"
+      }
+    },
+    "source_gitlinks": {
+      "buildroot": "cb857ba4c87a93e5265a9e4a3f32071abf39e14a",
+      "docs": "45e088299d115abeb2d5663f0e06a90b16dd5ebe",
+      "linux-esp32-s31": "2bf05bc5f379066cf5f64d750afbb0b4ba0bf364",
+      "opensbi-esp32-s31": "c8d6e92c70e9679b9e8d1a4ab95acd13ea04b5b5",
+      "u-boot-esp32-s31": "d692a84ea0bf80f319512bb8e892da0bbb93a4b4"
+    },
+    "reported_release_spl": "a6139e5181651838b31e0bd95af8155b862ba23c"
+  },
+  "compat_spl": {
+    "source_repo": "https://github.com/GrieferPig/u-boot-esp32-s31.git",
+    "base_commit": "997ee15fdbc0209f998121aa58190487c71e0aca",
+    "contribution_repo": "https://github.com/gnfranco/u-boot.git",
+    "review_commit": "0686a3b2137f388826dccd65a8be71cacc2ea0d2",
+    "source_tree": "df4175eb4edee910544ad2e477d9cbb454edb210",
+    "review": "https://github.com/GrieferPig/u-boot-esp32-s31/pull/1",
+    "patch": {
+      "path": "patches/experimental/s31-wifi/0001-psram-compat.patch",
+      "size": 6121,
+      "sha256": "66429e442dde74fc3be123dfa1eeaa8425ff8a32dfe68bff9b1d11c79e9955d0"
+    },
+    "config": "espressif_esp32s31_defconfig",
+    "enable": "ESP32S31_PSRAM_COMPAT_200MHZ",
+    "gcc_version": "esp-15.2.0_20251204",
+    "gcc_sha256": "921cbcc885a69ac3d4eda619b5b0bf1e29b83b2f169754711df8428c4e8a4dca",
+    "esptool_version": "5.3.1",
+    "validated_binary": {
+      "size": 38816,
+      "sha256": "885f9eb87b0be725779ddc56d091ee8be1351600bf6a70a9ba6e5269ae4b36de"
+    },
+    "offset": 8192,
+    "slot_end": 57344
+  },
+  "firmware_research_only": {
+    "repo": "https://github.com/GrieferPig/esp32-s31-linux-firmware.git",
+    "commit": "15ba03651e8a26fa5972ef01d63bbc9aa814a76a",
+    "release": "fw-v0.3.1",
+    "input_id": "420bab2b65915fb58343bbebc6f48a6c5be01d05737a63b8e3d7d67b8d3bd3b4",
+    "license_mode": "engineering-only",
+    "abi": "ilp32f",
+    "idf_commit": "08e0d30a74ad0bfd5a34933142b80f45619ee410",
+    "assets": {
+      "s31-firmware-inputs.tar": {
+        "size": 9676800,
+        "sha256": "3376cba066c4540786a653c099178a60ea2d286d14249f52b30acecc10ed5504",
+        "url": "https://github.com/GrieferPig/esp32-s31-linux-firmware/releases/download/fw-v0.3.1/s31-firmware-inputs.tar"
+      },
+      "firmware-inputs.json": {
+        "size": 7956,
+        "sha256": "f913487cb78bb844d5be439d36cefb438d98c5ccaa94169e1fac61f04721edcd",
+        "url": "https://github.com/GrieferPig/esp32-s31-linux-firmware/releases/download/fw-v0.3.1/firmware-inputs.json"
+      },
+      "RADIO_BUNDLE_LICENSES.md": {
+        "size": 1685,
+        "sha256": "04a8748be6636f5ebec3e95bc8f6134f36a053e49059a3a7012002a3a4c768c2",
+        "url": "https://github.com/GrieferPig/esp32-s31-linux-firmware/releases/download/fw-v0.3.1/RADIO_BUNDLE_LICENSES.md"
+      }
+    },
+    "note": "Newer independent input bundle. Not the October tested radio payload. Do not mix automatically."
+  },
+  "rollback": {
+    "flash_bytes": 16777216,
+    "note": "Keep verified board-specific backup privately; do not commit or redistribute."
+  }
+}
