@@ -7,7 +7,7 @@ The 2026-11-24 Linux runtime confirmed 2 online CPUs, Sv32, 14408 KiB MemTotal, 
 
 The current device tree enables Ethernet, USB, I2C and SD/MMC; their reset provider is disabled in the baseline kernel config. Pinctrl also depends on that provider. This hypothesis was confirmed on the board: enabling the reset provider allowed pinctrl, GPIO, Ethernet, USB host, I2C and MMC to probe.
 
-Append `configs/esp32s31-peripherals-experimental.config` (absolute path) to the existing Buildroot `BR2_LINUX_KERNEL_CONFIG_FRAGMENT_FILES`, preserving both board fragments. Use a separate output directory or a backed-up baseline. Check the final kernel .config after Kconfig dependency resolution. Keep the known-good SPL/PSRAM patch and the same flash layout. Check image sizes against slot limits before flashing.
+Apply the numbered Linux patches in `patches/linux/` in order to Linux 7fdbad0c5 before configuring. Append `configs/esp32s31-peripherals-experimental.config` (absolute path) to the existing Buildroot `BR2_LINUX_KERNEL_CONFIG_FRAGMENT_FILES`, preserving both board fragments. Use a separate output directory or a backed-up baseline. Check the final kernel .config after Kconfig dependency resolution. Keep the known-good SPL/PSRAM patch and the same flash layout. Check image sizes against slot limits before flashing.
 
 Validation order:
 1. Boot and verify UART, both CPUs, memory, and repeat the native ELF smoke test.
@@ -29,7 +29,7 @@ Rollback: retain the full known-good image with SHA-256 recorded in README.md. R
 - WS2812 on GPIO60: RMT TX0 driver registered via Linux multicolor LED class; RGB writes succeeded without TX timeout. Physical red/green/blue transitions and smooth spectral fade confirmed by the board operator.
 - Fade example: `examples/esp32s31/rgb-fade.c`, compiled for rv32imac/ilp32, transferred via UART to /tmp and executed with approximately 50 updates/s. Not persistent after reboot.
 - Linux patch: `patches/linux/0001-esp32s31-rmt-ws2812-experiment.patch` (kernel commit d4f9210f0, parent 7fdbad0c5). Apply before enabling the config fragment.
-- RMT is an experimental single-pixel TX implementation, not a generic driver; DT binding, clock/reset framework integration, style and further testing remain pending.
+- RMT v1.0 was an experimental single-pixel TX implementation; v1.1 supersedes it with the generic TX controller described in `RMT-v1.1.0.md`.
 - Original known-good full flash image preserved. Existing nonfatal FDT reserved-memory warning remains.
 
 ### Reproduction
@@ -39,3 +39,7 @@ Build the patched XIP kernel and board DTB with the existing board and generic N
 Validated RMT kernel SHA-256: `cecc8705d9cd84c4af06bc4a8607b0cf5b92a39728ec1870aae1ae6208f9bee5`. DTB SHA-256: `96dff5d495ef186b8d985d93a84ad1cfd663e27eb2ccec3ea1944145edf091f7` (before esptool padding).
 
 Run the example cross-compiled with `riscv64-esp-linux-musl-gcc -march=rv32imac -mabi=ilp32 -Os -Wall -Wextra rgb-fade.c -o rgb-fade`. On the board: `./rgb-fade`. SIGTERM or SIGINT switches the LED off.
+
+## RMT v1.1.0
+
+See [RMT v1.1.0 release notes](RMT-v1.1.0.md) for the current validated kernel/DTB hashes, regression results and remaining limitations. The hashes above refer to v1.0.
