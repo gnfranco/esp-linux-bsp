@@ -1,0 +1,32 @@
+From 7acff494f9c877feea913f6026933f90bf813f1f Mon Sep 17 00:00:00 2001
+From: Avi Weiss <thnkslprpt@gmail.com>
+Date: Thu, 26 Nov 2026 14:24:59 -0300
+Subject: [PATCH 1/9] can: ctucanfd: use self-test mode for PRESUME_ACK
+
+Backport of upstream Linux c31a435933f18be0f874302161333e9f16e200a0. Use self-test mode for CAN_CTRLMODE_PRESUME_ACK so transmitted frames can complete without receiving an ACK.
+
+Signed-off-by: Avi Weiss <thnkslprpt@gmail.com>
+Acked-by: Pavel Pisa <pisa@fel.cvut.cz>
+Signed-off-by: Marc Kleine-Budde <mkl@pengutronix.de>
+---
+ drivers/net/can/ctucanfd/ctucanfd_base.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/can/ctucanfd/ctucanfd_base.c b/drivers/net/can/ctucanfd/ctucanfd_base.c
+index 8bd3f0fc3..e4770e193 100644
+--- a/drivers/net/can/ctucanfd/ctucanfd_base.c
++++ b/drivers/net/can/ctucanfd/ctucanfd_base.c
+@@ -340,8 +340,8 @@ static void ctucan_set_mode(struct ctucan_priv *priv, const struct can_ctrlmode
+ 			(mode_reg & ~REG_MODE_FDE);
+ 
+ 	mode_reg = (mode->flags & CAN_CTRLMODE_PRESUME_ACK) ?
+-			(mode_reg | REG_MODE_ACF) :
+-			(mode_reg & ~REG_MODE_ACF);
++			(mode_reg | REG_MODE_STM) :
++			(mode_reg & ~REG_MODE_STM);
+ 
+ 	mode_reg = (mode->flags & CAN_CTRLMODE_FD_NON_ISO) ?
+ 			(mode_reg | REG_MODE_NISOFD) :
+-- 
+2.43.0
+

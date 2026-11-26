@@ -11,6 +11,10 @@ ESP32-S31 Buildroot integration.
 
 See [S31 baseline 2026-11-25](docs/esp32s31/BASELINE-20261125.md) for pinned component revisions, the active patch series and hardware validation. These patches are not yet accepted upstream.
 
+## USB, I2C and CAN FD engineering profile
+
+See [peripheral validation](docs/esp32s31/USB-I2C-CAN-QA-20261126.md), including real on-board I2C, USB mass storage and CTU CAN FD controller loopback results. The differential CAN bus and integrated radio image are pending.
+
 ## Optional native Wi-Fi engineering profile
 
 See [Wi-Fi profile](docs/esp32s31/WIFI-PROFILE.md) and [dependency lock](dependencies/s31-wifi.lock.json). This profile is separate from the vendor baseline and is not a redistributable release.

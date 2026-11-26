@@ -1,0 +1,31 @@
+From 9b41c9c5df88ed883b05662187e431bb3452e491 Mon Sep 17 00:00:00 2001
+From: Glauber Franco <776952+gnfranco@users.noreply.github.com>
+Date: Thu, 26 Nov 2026 14:27:31 -0300
+Subject: [PATCH 9/9] can: ctucanfd: explicitly disable SSP at lower data
+ bitrates
+
+The initial value of SSP_SRC is zero, which selects measured delay plus offset, not the disabled mode. On ESP32-S31 CTU CAN FD 2.4, this causes BRS transmission failures at 250, 500 and 1000 kbit/s with offset zero. Use the documented disabled encoding for rates at most 1 Mbit/s and retain measured delay plus offset above that threshold.
+
+Validated on both ESP32-S31 controllers in isolated single-pad self-test, with 128 frames per rate at 250, 500, 1000 and 2000 kbit/s, plus 128 FD frames without BRS per controller. No software TX echo; no RX/TX errors or drops. Differential bus validation remains pending.
+
+Signed-off-by: Glauber Franco <776952+gnfranco@users.noreply.github.com>
+---
+ drivers/net/can/ctucanfd/ctucanfd_base.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/can/ctucanfd/ctucanfd_base.c b/drivers/net/can/ctucanfd/ctucanfd_base.c
+index c90cccf44..37fd2617e 100644
+--- a/drivers/net/can/ctucanfd/ctucanfd_base.c
++++ b/drivers/net/can/ctucanfd/ctucanfd_base.c
+@@ -292,7 +292,7 @@ static int ctucan_set_secondary_sample_point(struct net_device *ndev)
+ 	struct ctucan_priv *priv = netdev_priv(ndev);
+ 	struct can_bittiming *dbt = &priv->can.fd.data_bittiming;
+ 	int ssp_offset = 0;
+-	u32 ssp_cfg = 0; /* No SSP by default */
++	u32 ssp_cfg = FIELD_PREP(REG_TRV_DELAY_SSP_SRC, 0x1); /* No SSP */
+ 
+ 	if (CTU_CAN_FD_ENABLED(priv)) {
+ 		netdev_err(ndev, "BUG! Cannot set SSP - CAN is enabled\n");
+-- 
+2.43.0
+

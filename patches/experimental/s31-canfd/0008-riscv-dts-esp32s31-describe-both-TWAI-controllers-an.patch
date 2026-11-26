@@ -1,0 +1,103 @@
+From 62883106297dcddece28f2052ed69555133822f9 Mon Sep 17 00:00:00 2001
+From: Glauber Franco <776952+gnfranco@users.noreply.github.com>
+Date: Thu, 26 Nov 2026 14:25:42 -0300
+Subject: [PATCH 8/9] riscv: dts: esp32s31: describe both TWAI controllers and
+ test overlay
+
+Signed-off-by: Glauber Franco <776952+gnfranco@users.noreply.github.com>
+---
+ arch/riscv/boot/dts/espressif/Makefile        |  1 +
+ ...nction-core-board-1-test-can-loopback.dtso | 36 +++++++++++++++++++
+ arch/riscv/boot/dts/espressif/esp32s31.dtsi   | 24 +++++++++++++
+ 3 files changed, 61 insertions(+)
+ create mode 100644 arch/riscv/boot/dts/espressif/esp32s31-function-core-board-1-test-can-loopback.dtso
+
+diff --git a/arch/riscv/boot/dts/espressif/Makefile b/arch/riscv/boot/dts/espressif/Makefile
+index d5098a4b9..cf5c8dea8 100644
+--- a/arch/riscv/boot/dts/espressif/Makefile
++++ b/arch/riscv/boot/dts/espressif/Makefile
+@@ -4,3 +4,4 @@ DTC_FLAGS_esp32s31-function-core-board-1 := -@
+ dtb-$(CONFIG_ARCH_ESPRESSIF) += esp32s31-function-core-board-1.dtb
+ dtb-$(CONFIG_ARCH_ESPRESSIF) += esp32s31-function-core-board-1-test-generic.dtbo
+ dtb-$(CONFIG_ARCH_ESPRESSIF) += esp32s31-korvo-1.dtb
++dtb-$(CONFIG_ARCH_ESPRESSIF) += esp32s31-function-core-board-1-test-can-loopback.dtbo
+diff --git a/arch/riscv/boot/dts/espressif/esp32s31-function-core-board-1-test-can-loopback.dtso b/arch/riscv/boot/dts/espressif/esp32s31-function-core-board-1-test-can-loopback.dtso
+new file mode 100644
+index 000000000..0f65a5766
+--- /dev/null
++++ b/arch/riscv/boot/dts/espressif/esp32s31-function-core-board-1-test-can-loopback.dtso
+@@ -0,0 +1,36 @@
++// SPDX-License-Identifier: (GPL-2.0 OR MIT)
++/* Isolated self-test: assign each TX and RX to the same unused header pad.
++ * GPIO35/36 must be unconnected. This is not a physical CAN bus.
++ */
++/dts-v1/;
++/plugin/;
++
++#include <dt-bindings/pinctrl/esp32s31-iomux.h>
++
++&espfunc {
++	twai0_loopback: twai0-loopback-pins {
++		pinmux = <ESP_PINMUX(35, ESP_FUNC_S31_TWAI0_LOOPBACK_ID)>;
++		input-enable;
++		bias-pull-up;
++		drive-strength = <5>;
++	};
++
++	twai1_loopback: twai1-loopback-pins {
++		pinmux = <ESP_PINMUX(36, ESP_FUNC_S31_TWAI1_LOOPBACK_ID)>;
++		input-enable;
++		bias-pull-up;
++		drive-strength = <5>;
++	};
++};
++
++&twai0 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&twai0_loopback>;
++	status = "okay";
++};
++
++&twai1 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&twai1_loopback>;
++	status = "okay";
++};
+diff --git a/arch/riscv/boot/dts/espressif/esp32s31.dtsi b/arch/riscv/boot/dts/espressif/esp32s31.dtsi
+index 8acea95de..a323d1d3e 100644
+--- a/arch/riscv/boot/dts/espressif/esp32s31.dtsi
++++ b/arch/riscv/boot/dts/espressif/esp32s31.dtsi
+@@ -285,6 +285,30 @@ hp_alive_sys: syscon@20589000 {
+ 			reg = <0x20589000 0x100>;
+ 		};
+ 
++		twai0: can@20394000 {
++			compatible = "esp,esp32s31-twai";
++			reg = <0x20394000 0x1000>;
++			interrupt-parent = <&intmtx>;
++			interrupts = <18 IRQ_TYPE_LEVEL_HIGH>;
++			clocks = <&clk ESP_S31_CLK_TWAI0_APB>,
++				 <&clk ESP_S31_CLK_TWAI0>;
++			clock-names = "apb", "core";
++			resets = <&rst ESP_S31_RST_TWAI0>;
++			status = "disabled";
++		};
++
++		twai1: can@20395000 {
++			compatible = "esp,esp32s31-twai";
++			reg = <0x20395000 0x1000>;
++			interrupt-parent = <&intmtx>;
++			interrupts = <20 IRQ_TYPE_LEVEL_HIGH>;
++			clocks = <&clk ESP_S31_CLK_TWAI1_APB>,
++				 <&clk ESP_S31_CLK_TWAI1>;
++			clock-names = "apb", "core";
++			resets = <&rst ESP_S31_RST_TWAI1>;
++			status = "disabled";
++		};
++
+ 		i2c0: i2c@20385000 {
+ 			compatible = "esp,esp32s31-i2c";
+ 			reg = <0x20385000 0x1000>;
+-- 
+2.43.0
+

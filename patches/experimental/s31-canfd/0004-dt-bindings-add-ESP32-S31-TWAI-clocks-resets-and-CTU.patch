@@ -1,0 +1,101 @@
+From ed51189cf99edaa37dd59910108695f3db8b1d0d Mon Sep 17 00:00:00 2001
+From: Glauber Franco <776952+gnfranco@users.noreply.github.com>
+Date: Thu, 26 Nov 2026 14:25:41 -0300
+Subject: [PATCH 4/9] dt-bindings: add ESP32-S31 TWAI clocks, resets and CTU
+ CAN FD variant
+
+Signed-off-by: Glauber Franco <776952+gnfranco@users.noreply.github.com>
+---
+ .../bindings/net/can/ctu,ctucanfd.yaml        | 28 +++++++++++++++++++
+ include/dt-bindings/clock/esp32s31.h          |  7 ++++-
+ include/dt-bindings/reset/esp32s31.h          |  5 +++-
+ 3 files changed, 38 insertions(+), 2 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/net/can/ctu,ctucanfd.yaml b/Documentation/devicetree/bindings/net/can/ctu,ctucanfd.yaml
+index a009a4402..3ca7c38d2 100644
+--- a/Documentation/devicetree/bindings/net/can/ctu,ctucanfd.yaml
++++ b/Documentation/devicetree/bindings/net/can/ctu,ctucanfd.yaml
+@@ -27,6 +27,24 @@ maintainers:
+ 
+ allOf:
+   - $ref: can-controller.yaml#
++  - if:
++      properties:
++        compatible:
++          contains:
++            const: esp,esp32s31-twai
++    then:
++      properties:
++        clocks:
++          minItems: 2
++      required:
++        - clock-names
++        - resets
++    else:
++      properties:
++        clocks:
++          maxItems: 1
++        clock-names: false
++        resets: false
+ 
+ properties:
+   compatible:
+@@ -35,6 +53,7 @@ properties:
+           - const: ctu,ctucanfd-2
+           - const: ctu,ctucanfd
+       - const: ctu,ctucanfd
++      - const: esp,esp32s31-twai
+ 
+   reg:
+     maxItems: 1
+@@ -46,6 +65,15 @@ properties:
+     description: |
+       phandle of reference clock (100 MHz is appropriate
+       for FPGA implementation on Zynq-7000 system).
++    minItems: 1
++    maxItems: 2
++
++  clock-names:
++    items:
++      - const: apb
++      - const: core
++
++  resets:
+     maxItems: 1
+ 
+ required:
+diff --git a/include/dt-bindings/clock/esp32s31.h b/include/dt-bindings/clock/esp32s31.h
+index 2009a2d43..81bb35e9d 100644
+--- a/include/dt-bindings/clock/esp32s31.h
++++ b/include/dt-bindings/clock/esp32s31.h
+@@ -57,6 +57,11 @@
+ 
+ #define ESP_S31_CLK_RMT_APB	22
+ #define ESP_S31_CLK_RMT		23
+-#define ESP_S31_CLK_NUM		24
++/* TWAI0/1 APB and core clocks (HP_SYS_CLKRST TWAIx_CTRL0). */
++#define ESP_S31_CLK_TWAI0_APB	24
++#define ESP_S31_CLK_TWAI0	25
++#define ESP_S31_CLK_TWAI1_APB	26
++#define ESP_S31_CLK_TWAI1	27
++#define ESP_S31_CLK_NUM		28
+ 
+ #endif /* ESP32S31_CLOCK_H */
+diff --git a/include/dt-bindings/reset/esp32s31.h b/include/dt-bindings/reset/esp32s31.h
+index f3bea0141..171c16fa7 100644
+--- a/include/dt-bindings/reset/esp32s31.h
++++ b/include/dt-bindings/reset/esp32s31.h
+@@ -28,6 +28,9 @@
+ #define ESP_S31_RST_SDMMC	7
+ 
+ #define ESP_S31_RST_RMT		8
+-#define ESP_S31_RST_NUM		9
++/* TWAI0/1 resets (HP_SYS_CLKRST TWAIx_CTRL0). */
++#define ESP_S31_RST_TWAI0	9
++#define ESP_S31_RST_TWAI1	10
++#define ESP_S31_RST_NUM		11
+ 
+ #endif /* ESP32S31_RESET_H */
+-- 
+2.43.0
+

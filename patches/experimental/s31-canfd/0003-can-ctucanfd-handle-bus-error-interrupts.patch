@@ -1,0 +1,36 @@
+From d4c79f2fe724adb5818623d9c14863e4b422741e Mon Sep 17 00:00:00 2001
+From: Avi Weiss <thnkslprpt@gmail.com>
+Date: Thu, 26 Nov 2026 14:24:59 -0300
+Subject: [PATCH 3/9] can: ctucanfd: handle bus error interrupts
+
+Backport of upstream Linux e74bae899529f49c0f375307983d12e8ecad7d4b. Acknowledge BEI at the top-level IRQ handler.
+
+Signed-off-by: Avi Weiss <thnkslprpt@gmail.com>
+Acked-by: Pavel Pisa <pisa@fel.cvut.cz>
+Signed-off-by: Marc Kleine-Budde <mkl@pengutronix.de>
+---
+ drivers/net/can/ctucanfd/ctucanfd_base.c | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/can/ctucanfd/ctucanfd_base.c b/drivers/net/can/ctucanfd/ctucanfd_base.c
+index 8e94142e7..c90cccf44 100644
+--- a/drivers/net/can/ctucanfd/ctucanfd_base.c
++++ b/drivers/net/can/ctucanfd/ctucanfd_base.c
+@@ -1136,8 +1136,12 @@ static irqreturn_t ctucan_interrupt(int irq, void *dev_id)
+ 		/* Error interrupts */
+ 		if (FIELD_GET(REG_INT_STAT_EWLI, isr) ||
+ 		    FIELD_GET(REG_INT_STAT_FCSI, isr) ||
+-		    FIELD_GET(REG_INT_STAT_ALI, isr)) {
+-			icr = isr & (REG_INT_STAT_EWLI | REG_INT_STAT_FCSI | REG_INT_STAT_ALI);
++		    FIELD_GET(REG_INT_STAT_ALI, isr) ||
++		    FIELD_GET(REG_INT_STAT_BEI, isr)) {
++			icr = isr & (REG_INT_STAT_EWLI |
++				     REG_INT_STAT_FCSI |
++				     REG_INT_STAT_ALI |
++				     REG_INT_STAT_BEI);
+ 
+ 			ctucan_netdev_dbg(ndev, "some ERR interrupt: clearing 0x%08x\n", icr);
+ 			ctucan_write32(priv, CTUCANFD_INT_STAT, icr);
+-- 
+2.43.0
+

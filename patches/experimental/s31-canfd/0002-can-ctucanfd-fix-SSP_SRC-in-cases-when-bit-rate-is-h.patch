@@ -1,0 +1,31 @@
+From cac9a6811fe3e481ad953b49eb1cf766bfbb983a Mon Sep 17 00:00:00 2001
+From: Ondrej Ille <ondrej.ille@gmail.com>
+Date: Thu, 26 Nov 2026 14:24:59 -0300
+Subject: [PATCH 2/9] can: ctucanfd: fix SSP_SRC in cases when bit-rate is
+ higher than 1 MBit.
+
+Backport of upstream Linux e707c591a139d1bfa4ddc83036fc820ca006a140. Select measured delay plus offset for data rates above 1 Mbit/s.
+
+Signed-off-by: Ondrej Ille <ondrej.ille@gmail.com>
+Signed-off-by: Pavel Pisa <pisa@fel.cvut.cz>
+Signed-off-by: Marc Kleine-Budde <mkl@pengutronix.de>
+---
+ drivers/net/can/ctucanfd/ctucanfd_base.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/can/ctucanfd/ctucanfd_base.c b/drivers/net/can/ctucanfd/ctucanfd_base.c
+index e4770e193..8e94142e7 100644
+--- a/drivers/net/can/ctucanfd/ctucanfd_base.c
++++ b/drivers/net/can/ctucanfd/ctucanfd_base.c
+@@ -310,7 +310,7 @@ static int ctucan_set_secondary_sample_point(struct net_device *ndev)
+ 		}
+ 
+ 		ssp_cfg = FIELD_PREP(REG_TRV_DELAY_SSP_OFFSET, ssp_offset);
+-		ssp_cfg |= FIELD_PREP(REG_TRV_DELAY_SSP_SRC, 0x1);
++		ssp_cfg |= FIELD_PREP(REG_TRV_DELAY_SSP_SRC, 0x0);
+ 	}
+ 
+ 	ctucan_write32(priv, CTUCANFD_TRV_DELAY, ssp_cfg);
+-- 
+2.43.0
+
