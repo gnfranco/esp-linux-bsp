@@ -21,6 +21,8 @@ def main():
     ap.add_argument("--hardfloat-sha",required=True)
     ap.add_argument("--log",type=pathlib.Path,required=True)
     ap.add_argument("--port",default="/dev/ttyUSB0")
+    ap.add_argument("--skip-reboot",action="store_true",
+                    help="report functional tests separately from reboot qualification")
     a=ap.parse_args()
     spec=importlib.util.spec_from_file_location("uart_helper",a.helper)
     h=importlib.util.module_from_spec(spec);spec.loader.exec_module(h)
@@ -68,16 +70,20 @@ def main():
         require("SMP_STRESS_PASS checks=8192" in out,"stress count")
         require(sum(x.startswith("D_REJECT_PASS case=") for x in out.splitlines())==5,"D reject count")
         require(all(any(x.startswith("MISALIGNED_"+kind+"_") for x in out.splitlines()) for kind in ("F","ZCF")),"misaligned results")
-        require(any(x in out.splitlines() for x in ("PTRACE_FAULT_PASS","PTRACE_FAULT_INVARIANT_GAP")),"ptrace fault evidence")
+        require("PTRACE_PARTIAL_WRITE_OBSERVED" in out.splitlines(),"non-vacuous partial write evidence")
+        require("PTRACE_FAULT_PASS" in out.splitlines() and
+                "PTRACE_FAULT_CANONICAL=1" in out.splitlines(),"ptrace fault invariant")
         h.command(s,f"rm -f {temp}/hardfloat.b64 {temp}/hardfloat {temp}/extended.b64 {temp}/extended; rmdir {temp}");made=False
         if mounted: h.command(s,"umount /tmp");mounted=False
         print("TARGET_ARTIFACTS_REMOVED",flush=True)
-        s.reset_input_buffer()
-        s.write(b"sync; reboot\r")
-        time.sleep(3);h.shell(s)
-        after=profile()
-        require(after!=before,"boot ID unchanged")
-        print("CANDIDATE_SOFTWARE_REBOOT_PASS",flush=True)
+        print("CANDIDATE_FUNCTIONAL_PASS",flush=True)
+        if not a.skip_reboot:
+            s.reset_input_buffer()
+            s.write(b"sync; reboot\r")
+            time.sleep(3);h.shell(s)
+            after=profile()
+            require(after!=before,"boot ID unchanged")
+            print("CANDIDATE_SOFTWARE_REBOOT_PASS",flush=True)
         require("PTRACE_FAULT_PASS" in out.splitlines(),"partial-copy canonicalization gap")
         print("EXTENDED_QUALIFICATION_PASS",flush=True)
     finally:

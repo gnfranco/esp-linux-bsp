@@ -169,6 +169,9 @@ static void ptrace_fault(void)
     if (ptrace(PTRACE_SETREGSET,pid,(void *)(uintptr_t)NT_PRFPREG,&fault)!=-1 || errno!=EFAULT)
         fail("faulting SETREGSET did not return EFAULT");
     getregs(pid,&regs);
+    if ((uint32_t)regs.regs[0] != (uint32_t)val)
+        fail("fault injection did not demonstrate a partial register write");
+    puts("PTRACE_PARTIAL_WRITE_OBSERVED");
     int canonical=1;
     for (unsigned i=0;i<32;i++) if (regs.regs[i]>>32) canonical=0;
     printf("PTRACE_FAULT_CANONICAL=%d\n",canonical);
@@ -183,8 +186,8 @@ static void ptrace_fault(void)
     if (ptrace(PTRACE_CONT,pid,0,0)) die("CONT");
     wait_good(pid);
     puts("PTRACE_IMMEDIATE_PASS");
-    if (!canonical) puts("PTRACE_FAULT_INVARIANT_GAP");
-    else puts("PTRACE_FAULT_PASS");
+    if (!canonical) fail("PTRACE_FAULT_INVARIANT_GAP");
+    puts("PTRACE_FAULT_PASS");
 }
 static void stress_worker(unsigned id)
 {

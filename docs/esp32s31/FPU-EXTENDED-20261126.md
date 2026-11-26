@@ -248,3 +248,10 @@ v1 F-only hardware results with v2 build success. The Lab v1
 reference remains flashed and has passed all five digest checks.
 The new baseline boot-fault audit and steady-state MM test are in
 [BOOT-FAULT-SCREEN-20261126.md](BOOT-FAULT-SCREEN-20261126.md).
+
+## Physical v2 requalification follow-up
+
+See [FPU-V2-QUALIFICATION-20261126.md](FPU-V2-QUALIFICATION-20261126.md).
+The v2 candidate passed the strict physical FP context and partial
+ptrace-copy tests; a separate signal-return failure-path probe was
+inconclusive. The original v1 boot instability remains open.
