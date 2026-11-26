@@ -123,3 +123,21 @@ released. No flash writes or persistent configuration changes.
 Continue with the independently built list-check diagnostic and
 a confirmed physical power-removal control when available.
 Preserve SMP as a project requirement.
+
+## Second independent review: GPT-6.2 Astra High
+
+A scoped read-only Codex CLI 0.172.0 review on Linvora-dev used
+`gpt-6.2-astra`, reasoning effort high. It completed successfully,
+without modifying source, host configuration or sandbox settings.
+The reviewer considered both completed matrices and the relevant
+Linux/OpenSBI excerpts. It agrees that the observed invalid metadata
+is a symptom, not identification of its writer; two-core timing and
+reset-dependent state remain hypotheses, and the cache excerpts do
+not establish a data-coherency cause. It recommends keeping SMP,
+comparing controlled 2->2 warm reset versus confirmed physical
+power removal, and comparing the original image with DEBUG_LIST
+under matched timing and configuration, retaining the first diagnostic
+event and exact vmlinux. Lack of recurrence under instrumentation
+does not establish a fix. No production patch recommended yet.
+Private full output:
+`~/deps/s31-research/codex-astra-s31-stability-review.md`.
