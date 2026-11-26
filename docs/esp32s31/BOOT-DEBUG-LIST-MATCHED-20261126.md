@@ -52,3 +52,24 @@ or external-network activity in this replay.
 Private logs on Orion:
 `~/source/build/s31-debug-list-matched-20261126/`.
 The diagnostic build and exact symbols remain on Linvora-dev.
+
+## Complete diagnostic build
+
+Cross-build completed on Linvora-dev with zero captured compiler
+warnings. XIP address 0x40400000, size 4,306,700 bytes (12,288 bytes
+more than original v1), 3,033,332 bytes spare in the 7 MiB slot.
+Exact source commit 9b41c9c5df88ed883b05662187e431bb3452e491,
+original pinned GCC 14.1.1, only the two listed config changes.
+The vmlinux, System.map, build log, config and DTBs are retained in
+`~/deps/s31-research/kernel-v1-debug-list-build/`.
+
+| Artifact | SHA-256 |
+|---|---|
+| Diagnostic XIP | `2bb91365e1ff8b9e34d63c7e86c78b6485453afb3c7c6ed800ed3ab48b246eec` |
+| Diagnostic config | `893c8f22b82278ef2e6942117285db96df5784898286a988c5146aa81d77f11b` |
+| Private transport archive | `6bc151d7f483f9aa6471a95a9f171c78c652b4918e9dde608fc20ba09f13d86a` |
+
+Transfer via an unpublished private draft in esp-linux-lab, with
+both package and constituent digests checked on Orion. The original
+Lab v1 release is not modified. The candidate uses the original
+release DTB; kernel slot only is changed for bench testing.
