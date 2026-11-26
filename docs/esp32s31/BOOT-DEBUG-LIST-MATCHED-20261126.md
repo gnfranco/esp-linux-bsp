@@ -201,3 +201,73 @@ This is one post-boot hotplug observation, not a general USB
 qualification or proof of the cause of early boot failures.
 Power, transient DMA/cache effects, and timing-dependent
 concurrency remain candidate hypotheses.
+
+## USB authorization matched control (2026-11-26)
+
+The same physical Kingston device remained connected throughout.
+The original v1 image and release DTB were retained. Both groups
+used the same ROM/RTS-assisted reset procedure and interrupted
+U-Boot autoboot; the default bootcmd and bootargsnor were verified.
+Group A ran the original bootcmd unchanged; group B appended
+usbcore.authorized_default=0 to the volatile bootargsnor variable.
+The U-Boot environment is not persistent (no saveenv, flash write,
+or storage mount). This control does not eliminate enumeration,
+control transfers, or DMA before USB authorization. USB current
+draw may also differ before and after configuration.
+
+Completed order ABBAABBAABBA, six trials in each group. After a
+verified successful B boot, both authorization attributes were
+zero and no sda disk was present. The already attached device
+was then authorized in sysfs after the root profile and a 3 s
+settle; a 5 s settle preceded post-authorization verification
+(same boot ID, both CPUs, disk present, no storage mount).
+
+| Condition | PASS | Oops |
+|---|---:|---:|
+| A: normal device authorization | 6 | 0 |
+| B: deferred device authorization, initial boot | 4 | 2 |
+| C: authorize after successful B boot | 4 | 0 |
+
+Trial 02-B: external high-speed USB enumerated at 1.968780 s.
+The first Oops occurred at 2.217099 s on CPU0 kworker/0:1,
+before mass-storage detection. EPC c00bac02, invalid address
+00687333, load page fault. Exact release System.map maps EPC
+to __slab_alloc_node.isra.0+0xc6. The exact vmlinux disassembly
+shows a load through the freelist object pointer plus offset;
+s5=0068732f and a5=00687333. The call trace includes kstrdup,
+__kernfs_new_node, kernfs_create_dir_ns, internal_create_group,
+dpm_sysfs_add, device_add, usb_new_device and hub_event.
+CONFIG_SLUB_TINY=y. This is consistent with an invalid freelist
+pointer but does not identify the actor or mechanism of corruption.
+
+Trial 10-B: device explicitly not authorized at 2.268975 s.
+Oops at 2.303784 s on CPU1 in init, EPC c00aeff2
+(unlink_anon_vmas+0xcc), store page fault at 00000104, trace
+includes free_pgtables, exit_mmap, __mmput, begin_new_exec,
+load_elf_binary and bprm_execve. Neither failed B trace contains
+mass-storage detection or SCSI host registration.
+
+Symbolization and disassembly used the retained Orion
+s31-ctucanfd-qa-20261126 vmlinux/System.map, whose xipImage
+SHA-256 5fe191d8e189a229f68848791bdb22b851b1b1922ca3f4b0a150030ba0f406ed
+matches the original release image. All successful trials verified
+RV32 no-F, CPUs 0–1, read-only CramFS, distinct boot IDs, and
+the exact selected command line. One additional normal boot
+passed after the matched sequence. UART free at finish.
+
+Private original evidence (28 files, including runner and
+13 UART traces) copied to Linvora-dev:
+~/deps/s31-research/bench-evidence/usb-auth-ab-20261126T232121Z/evidence.tar.gz
+SHA-256 026cc0bbf81300e97d13fd479bb93652e435910a198a4e8e20694f5c734a79ed.
+Runner SHA-256 523043b1347c55fe22fac92769aaea61e2fc90faf57e857a6efa080e3d0677da.
+Raw logs not published.
+
+The mass-storage driver and filesystem mount are not necessary
+conditions for the observed failure. It remains possible that
+general enumeration, DMA/cache coherency, SMP memory corruption,
+or power integrity contributes. These small samples do not
+establish a failure-rate difference or prove a race. The next
+independent diagnostic candidate could switch DWC2 host DMA off
+for this board only, retaining SMP and all other release settings;
+verify actual PIO mode and compare against matched DMA trials.
+A result that suppresses the fault is not, by itself, a fix.
