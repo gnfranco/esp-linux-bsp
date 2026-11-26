@@ -163,3 +163,41 @@ oscilloscope measurement of the 5 V input and 3.3 V rail during
 enumeration/reset would provide direct electrical evidence.
 Do not infer a power fault, DMA defect, or a fixed SMP race from
 these small, nonrandomized samples. No source changes proposed.
+
+## Post-boot USB hotplug control (2026-11-26)
+
+On the original Lab v1 image with no FPU advertised and both harts
+online, the operator connected the Kingston USB storage device
+only after the root shell/profile was ready. Continuous serial
+capture began before insertion. No filesystem mount, manual
+media-content read, write, or flash reprogramming was requested.
+
+| Event | Linux uptime (s) |
+|---|---:|
+| Pre-insertion profile | 2.80 |
+| High-speed USB enumeration | 19.294542 |
+| USB mass-storage detected | 19.512801 |
+| SCSI host registered | 19.529173 |
+| Removable block disk attached | 20.812255 |
+| Post-insertion profile | 49.69 |
+
+The post-insertion profile confirmed the same boot ID, CPUs 0–1,
+read-only CramFS root, external USB device 1-1 and block device sda
+present. No USB disconnect, Oops, kernel panic or brownout message
+was found. No storage filesystem appeared in /proc/mounts.
+The kernel's normal partition scan reported an invalid alternate
+GPT and used the primary GPT; no attempt was made to repair it.
+
+The first monitor attempt timed out before physical insertion;
+the subsequent 3600 s bounded monitor captured one successful
+hotplug. Its automatic classification was inconclusive because
+ANSI SGR sequences wrapped the symlink names in ls output. An
+offline recheck of the original trace after removing terminal
+escape sequences confirmed the expected devices, boot ID and
+mount state. UART released. Private trace on Orion:
+~/source/build/s31-debug-list-matched-20261126/usb-hotplug-20261126T230641Z/capture.uart.
+
+This is one post-boot hotplug observation, not a general USB
+qualification or proof of the cause of early boot failures.
+Power, transient DMA/cache effects, and timing-dependent
+concurrency remain candidate hypotheses.
