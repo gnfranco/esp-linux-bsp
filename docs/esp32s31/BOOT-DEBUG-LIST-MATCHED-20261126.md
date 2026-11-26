@@ -73,3 +73,43 @@ Transfer via an unpublished private draft in esp-linux-lab, with
 both package and constituent digests checked on Orion. The original
 Lab v1 release is not modified. The candidate uses the original
 release DTB; kernel slot only is changed for bench testing.
+
+## Diagnostic bench results
+
+Before the diagnostic flash write, all five original flash component
+digests were verified again. Only the XIP slot at 0x500000 was
+temporarily replaced. Both diagnostic XIP and original DTB verified.
+Initial diagnostic boot passed, followed by six controlled 2->2 warm
+reboots and the final profile check.
+
+| Trial | Result | Elapsed seconds (excluding settle) |
+|---|---|---:|
+| 1 | PASS | 8.18 |
+| 2 | PASS | 8.44 |
+| 3 | PASS | 8.25 |
+| 4 | PASS | 8.27 |
+| 5 | PASS | 8.22 |
+| 6 | PASS | 8.25 |
+
+The original kernel passed all six matched warm trials (8.00–8.13 s)
+as well. No list integrity warning, Oops, or panic was found in the
+seven captured diagnostic UART logs (initial plus six warm boots).
+The baseline's separate initial fault was not reproduced by the
+diagnostic candidate. These are small samples with no physically
+verified power-off cycle. They do not establish a difference in
+failure rates or a causal fix; keep DEBUG_LIST as an experimental
+diagnostic, not a production change. SMP remains enabled throughout.
+The baseline fault predates FPU enablement, so FPU work remains
+independent of the boot-instability investigation.
+
+The original release kernel was restored, and all five original
+flash-component digests matched after rollback.
+The first post-restore console attempt timed out. A single read-only
+ROM/RTS-assisted recovery restored the console. The final baseline
+profile confirmed riscv32, Linux 6.18.0+, harts 0–1 online, read-only
+CramFS, and no advertised F/D (HWCAP 0x1105; F=0 D=0 HWPROBE_FD=0).
+The baseline executable digest matched, its expected no-F skip passed,
+and the temporary target artifact was removed. UART was released.
+The timeout is recorded separately; its signature is unknown and is
+not assumed to be the earlier VMA Oops. No permanent remediation
+or production qualification is claimed.
