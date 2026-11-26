@@ -10,9 +10,11 @@ def node(a,name):return next((n for n in a if n.get('info',{}).get('props',{}).g
 def ports(a,nid,d):return {x['info']['props'].get('audio.channel'):x['id'] for x in a if x['type'].endswith(':Port') and str(x['info']['props'].get('node.id'))==str(nid) and x['info']['direction']==d}
 pair=connect=play=None;nid=None
 try:
- a=run('bluetoothctl','--timeout','10','scan','bredr')
- print('DISCOVERY_RC',a.returncode,flush=True)
- assert 'S31-CLASSIC-QA-2511' in run('bluetoothctl','devices').stdout
+ for attempt in range(3):
+  a=run('bluetoothctl','--timeout','10','scan','bredr')
+  print('DISCOVERY_ATTEMPT',attempt+1,'RC',a.returncode,flush=True)
+  if addr in run('bluetoothctl','devices').stdout:break
+ else:raise RuntimeError('authorized receiver not discovered')
  with open('live-pair.log','w') as log:
   pair=subprocess.Popen(['bluetoothctl','--timeout','60','pair',addr],stdout=log,stderr=subprocess.STDOUT)
   for _ in range(60):
@@ -28,7 +30,16 @@ try:
    time.sleep(.3)
   else:raise RuntimeError('test sink not available')
   nid=n['id'];print('A2DP_NODE_READY',nid,flush=True)
+  subprocess.run(['wpctl','set-mute',str(nid),'0'],check=True)
   subprocess.run(['wpctl','set-volume',str(nid),'0.40'],check=True)
+  for attempt in range(8):
+   time.sleep(.5)
+   v=run('wpctl','get-volume',str(nid)).stdout.strip()
+   m=re.search(r'Volume: ([0-9.]+)',v)
+   if m and float(m.group(1))>0.1 and '[MUTED]' not in v:break
+   subprocess.run(['wpctl','set-volume',str(nid),'0.40'],check=True)
+  else:raise RuntimeError('nonzero sink volume not confirmed')
+  print('SINK_VOLUME',v,flush=True)
   play=subprocess.Popen(['pw-play','--target','0','--properties','{"node.name":"s31-live-tone","node.autoconnect":false}','tone-stereo.wav'])
   for _ in range(40):
    a=get();tone=node(a,'s31-live-tone')
@@ -37,6 +48,9 @@ try:
     if all(ch in outs and ch in ins for ch in ('FL','FR')):break
    time.sleep(.15)
   else:raise RuntimeError('audio ports missing')
+  subprocess.run(['wpctl','set-mute',str(tone['id']),'0'],check=True)
+  subprocess.run(['wpctl','set-volume',str(tone['id']),'1.0'],check=True)
+  print('STREAM_VOLUME',run('wpctl','get-volume',str(tone['id'])).stdout.strip(),flush=True)
   for ch in ('FL','FR'):subprocess.run(['pw-link',str(outs[ch]),str(ins[ch])],check=True)
   print('EXPLICIT_STEREO_LINK_PASS',flush=True)
   seen=False
@@ -52,7 +66,7 @@ try:
   time.sleep(1)
 finally:
  if play and play.poll() is None:play.terminate();play.wait(timeout=5)
- if nid:run('wpctl','set-volume',str(nid),'0')
+
  if connect and connect.poll() is None:connect.terminate();connect.wait(timeout=5)
  run('bluetoothctl','--timeout','8','disconnect',addr)
  if pair and pair.poll() is None:pair.terminate();pair.wait(timeout=5)
