@@ -113,3 +113,53 @@ and the temporary target artifact was removed. UART was released.
 The timeout is recorded separately; its signature is unknown and is
 not assumed to be the earlier VMA Oops. No permanent remediation
 or production qualification is claimed.
+
+## Peripheral removal control (2026-11-26)
+
+The operator physically unplugged the USB mass-storage device and
+suggested a power/thermal margin hypothesis. No firmware changes,
+flash writes, or other intentional hardware changes were made for
+this control. The original v1 image had already been restored and
+all five original component digests verified earlier. The DWC2
+host controller remained enabled; no external USB device enumeration
+was found in these captures. Input voltage/current and temperature
+were not measured.
+
+Retrospective timestamps in three earlier failing captures with USB
+storage present (seconds since the respective Linux boot):
+
+| Capture | Mass storage detected | First Oops | Delta |
+|---|---:|---:|---:|
+| Matched baseline initial | 2.256347 | 2.281889 | 25.542 ms |
+| Earlier matrix warm-05 | 2.278213 | 2.285487 | 7.274 ms |
+| Earlier matrix warm-05-recovery | 2.264503 | 2.268210 | 3.707 ms |
+
+The matched baseline initial capture also records SCSI host
+registration at 2.272666 s, 9.223 ms before the first Oops.
+This temporal association is not evidence of a causal mechanism:
+normal init activity and USB discovery may overlap in time.
+
+Six warm software resets (7.91–8.07 s) and six ROM/RTS-assisted
+resets (6.91–6.96 s) passed, using the same no-F two-hart profile,
+exact release command line, CramFS root, distinct boot IDs,
+and 3 s settle as in the earlier matched suite. Initial boot also
+passed. Across all 13 captures, both harts and DWC2 were present;
+no external USB enumeration, Oops, panic, list corruption diagnostic,
+or brownout message was found. The suite exited 0; UART released.
+ROM/RTS resets do not establish complete physical power removal.
+
+Private logs:
+Orion, ~/source/build/s31-debug-list-matched-20261126/no-usb-20261126T223505Z/.
+Earlier matrix captures under
+~/source/build/s31-reboot-matrix-20261126/trials/.
+
+Reference: official board schematic (J4/U5 USB host current limit
+and U4 regulator sharing VCC_5V):
+https://dl.espressif.com/schematics/esp32-s31-function-coreboard-1-schematics.pdf
+The observation warrants separate power integrity and USB software
+investigations. A powered USB hub with a non-backfeeding design can
+help separate peripheral supply load from host activity; an
+oscilloscope measurement of the 5 V input and 3.3 V rail during
+enumeration/reset would provide direct electrical evidence.
+Do not infer a power fault, DMA defect, or a fixed SMP race from
+these small, nonrandomized samples. No source changes proposed.
