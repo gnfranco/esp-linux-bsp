@@ -93,3 +93,33 @@ boot profile or failed recovery. Logs remain private under
 
 The build runner is separate from physical test execution. All
 compilation remains in Linvora-dev.
+
+## Follow-up: crossed pre/post-reset CPU counts
+
+The second series used three blocks with source/destination transitions
+2->1, 1->1, 1->2, 2->2. A separate initial console open caused a ROM
+reported POWERON boot with the exact previous `anon_vma_clone` Oops
+(c00af0e0, VA 0x11e); this was not a warm-reboot trial. Read-only
+RTS recovery passed before the controlled series.
+
+| Transition | Completed | Passed | Failed |
+|---|---:|---:|---:|
+| 2 -> 1 | 3 | 3 | 0 |
+| 1 -> 1 | 3 | 3 | 0 |
+| 1 -> 2 | 3 | 3 | 0 |
+| 2 -> 2 | 3 | 3 | 0 |
+
+All 12 controlled transitions passed (6.27–6.57 s).
+Combined with the earlier alternating screen, 11/11 one-core
+destination boots and 9/11 two-core destination boots passed
+(2 failures), but the two runs are not identically randomized
+or independent and the initial console-failure is excluded.
+The second series did not reproduce a source/destination effect.
+This reinforces intermittency and does not establish that SMP
+itself is faulty or that maxcpus=1 is a reliable fix.
+
+The board finished the final pair in the two-hart v1 profile, UART
+released. No flash writes or persistent configuration changes.
+Continue with the independently built list-check diagnostic and
+a confirmed physical power-removal control when available.
+Preserve SMP as a project requirement.
