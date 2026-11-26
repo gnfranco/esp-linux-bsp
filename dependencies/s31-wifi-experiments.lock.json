@@ -28,6 +28,14 @@
     "patches/experimental/s31-wifi/0004-softmac-software-tkip.mbox": {
       "bytes": 10532,
       "sha256": "a97ec244f77757891b47d33beb67b8704d6145d2e7c7e55b3dc67406c20bc50e"
+    },
+    "patches/experimental/s31-wifi/0005-radio-profile-packaging-guard.patch": {
+      "bytes": 9665,
+      "sha256": "2e6ccfb8dc21257d1e405a1b7bd59a04e35d4631c4797a4844bc05259fb3a019"
+    },
+    "patches/experimental/s31-wifi/0006-softmac-review-cleanup.patch": {
+      "bytes": 6442,
+      "sha256": "3de6d1cdbacd94a5817832c4be40a2a63ce5897c50ec976c2aaf234f62035b1f"
     }
   },
   "local_artifacts": {
@@ -198,5 +206,35 @@
       "https://github.com/GrieferPig/esp32-s31-linux-firmware/pull/1",
       "https://github.com/GrieferPig/linux-esp32-s31/pull/3"
     ]
+  },
+  "review_cleanup": {
+    "producer_commit": "93d624d14aa4d665c091c014ef5619eb994728ec",
+    "kernel_commit": "9594a0997641415ea8e643b96212d134676dbecb",
+    "patch_replay": "exact tree match for both follow-up patches",
+    "package_tests": "24/24 PASS",
+    "checkpatch": "0 errors, 0 warnings, 0 checks",
+    "profile_switch": "combined -> wifi-only -> combined; identical final combined relocatable SHA-256",
+    "combined_payload_sha256": "68db16b33ec0094adf3f4418327c6201bd2e6e0a01abff0781350d063423f1fe",
+    "radio_sha256": "92c888ee18fee84ddd065b62029e783a04e7e0c284518ee8b0ef2c3afb2de87a",
+    "module_sha256": "4a04dd915e6117754699e13ca3d3a2044a29833f358f1209df41b2f788acac62",
+    "rootfs_sha256": "489f0c6aad4fbe0115f3ffe7c6727e5d3be65000989ffd8a7490fd1ba63485b2",
+    "flash": "both partition hashes verified",
+    "hardware": {
+      "default_mode_ccmp": "association and DHCP PASS; 15/15 ICMP",
+      "legacy_software_mode_ccmp": "association and DHCP PASS; 15/15 ICMP; TKIP capability advertised",
+      "mode": "combo verified in both",
+      "mixed_tkip_retest": "not performed; AP retained CCMP-only configuration",
+      "bluetooth_media_retest": "not repeated after diagnostics-only kernel cleanup; previous results retained"
+    },
+    "evidence_sha256": {
+      "ccmp-default.log": "5201cd9e40981fc6044672fcb630f9970939610998ef79f375b4dd09da293791",
+      "ccmp-legacy.log": "3c7e156c2d10e4a428611866a9f315584d091493a92a2b1c3015e0f7f2788387",
+      "package-tests.log": "d73e6003dc8dc39f10093d12d8080927bf2c3e20abbc92722a32d38658ea4160",
+      "checkpatch.log": "27925c2d5494b3aaaf40f8b916764eec5d3043339e9bc89d993442668c9ea53c",
+      "flash.log": "ab9238e2e84254946bf4d31f5008142d89f95699b187e8b67bf165b4c4563893",
+      "kernel-build.log": "c354d448eb36c62b64bfcc356eb7f8f4658d61ac35492d7b8c8e9c84d8839b5a",
+      "package.log": "46953750be904b73482f5514f2f45e4a3b62023b3f186b56bf28ce91134dae64"
+    },
+    "scope": "source-only integration; upstream maintainer review pending; no production qualification"
   }
 }

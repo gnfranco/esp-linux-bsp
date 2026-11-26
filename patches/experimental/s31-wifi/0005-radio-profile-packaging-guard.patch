@@ -1,0 +1,172 @@
+From 93d624d14aa4d665c091c014ef5619eb994728ec Mon Sep 17 00:00:00 2001
+From: Glauber Franco <gnfranco@gmail.com>
+Date: Wed, 25 Nov 2026 23:29:47 -0300
+Subject: [PATCH] radio: guard combined firmware-input packaging by payload
+ profile
+
+Signed-off-by: Glauber Franco <gnfranco@gmail.com>
+---
+ docs/wifi-only-experiment.md               |  4 +++
+ firmware/radio/Makefile                    |  4 ++-
+ tools/build/firmware_package.py            | 42 ++++++++++++++++++++--
+ tools/build/tests/test_firmware_package.py | 25 ++++++++++++-
+ 4 files changed, 71 insertions(+), 4 deletions(-)
+
+diff --git a/docs/wifi-only-experiment.md b/docs/wifi-only-experiment.md
+index 34b37b4..0bbe996 100644
+--- a/docs/wifi-only-experiment.md
++++ b/docs/wifi-only-experiment.md
+@@ -17,3 +17,7 @@ Pinned producer base: 15ba03651e8a26fa5972ef01d63bbc9aa814a76a. ESP-IDF: 08e0d30
+ ## Remaining binary audit
+ 
+ Input section estimates from the reduced linker map: libnet80211 244174 bytes; libpp 78758; libphy 23293; libcoexist 6619. These are approximate input contributions, not exact XIP or total proprietary-code sizes. The largest libnet80211 contributors include connection management, ioctl, scan, output, STA, AP, HT and HE. Investigate root dependencies before removing members; do not infer dispensability from the member name. No new Wi-Fi reductions beyond the tested Bluetooth exclusion have been claimed.
++
++### Packaging boundary
++
++The localized payload build records `radio/radio-profile.json`, binding the selected profile to the exact ELF SHA-256. Schema-1 firmware input archives accept only combined-radio payloads with a matching build record. Missing, experimental or stale records fail closed at archive creation; rebuild the combined payload rather than relabeling a record. Existing schema-1 archive verification remains unchanged. This local build record is provenance evidence, not a signature or an authorization to redistribute proprietary inputs.
+diff --git a/firmware/radio/Makefile b/firmware/radio/Makefile
+index b383c03..926f452 100644
+--- a/firmware/radio/Makefile
++++ b/firmware/radio/Makefile
+@@ -181,10 +181,12 @@ linux-radio-localize.txt: linux_radio.resolved.o $(RADIO_MAKEFILE)
+ 		awk '{ n=$$NF; if (n !~ /^(s31_radio_fw_abi_version|s31_radio_(stack|shutdown|bt_(enable|disable)|wifi_(scan|connect|disconnect|control))_task|s31_radio_wifi_(read_mac|clock_enable|clock_disable)|s31_radio_(vhci|wifi)_try_send|s31_radio_wifi_try_send_interface|s31_radio_coex_status|s31_rtos_(init|tick|hard_tick|free|task_release|isr_depth)|s31_linux_timer_next_deadline_ns|xTaskCreatePinnedToCore)$$/) print n; }' | \
+ 		sort -u > $@
+ 
+-linux_radio.localized.o: linux_radio.resolved.o linux-radio-localize.txt
++linux_radio.localized.o: linux_radio.resolved.o linux-radio-localize.txt $(PROJECT_DIR)/tools/build/firmware_package.py
+ 	$(ESP_TOOLS)/bin/riscv32-esp-elf-objcopy \
+ 		--strip-debug \
+ 		--localize-symbols=linux-radio-localize.txt $< $@
++	python3 $(PROJECT_DIR)/tools/build/firmware_package.py record-radio-profile \
++		--payload $@ --profile $(if $(filter 1,$(S31_WIFI_ONLY)),wifi-only,combined)
+ 
+ linux_radio.kbuild.o: linux_radio.localized.o $(RADIO_SRC)/linux_module_sections.lds
+ 	$(ESP_TOOLS)/bin/riscv32-esp-elf-ld -r --no-relax \
+diff --git a/tools/build/firmware_package.py b/tools/build/firmware_package.py
+index 59e30eb..80cec74 100644
+--- a/tools/build/firmware_package.py
++++ b/tools/build/firmware_package.py
+@@ -28,6 +28,8 @@ ISA = 'rv32imafc_zicsr_zifencei_zaamo_zalrsc_xesploop_xespv2p2'
+ ABI = 'ilp32f'
+ LIMIT = 64 * 1024 * 1024
+ MANIFEST = 'firmware-inputs.json'
++RADIO_PROFILE = 'radio/radio-profile.json'
++RADIO_PAYLOAD = 'radio/linux_radio.localized.o'
+ # Archive paths intentionally match existing out/ consumers.
+ ARTIFACTS = (
+     'images/spl_app.bin', 'images/u-boot.itb',
+@@ -170,9 +172,39 @@ def check_contents(files, manifest, expected):
+         raise ValueError('empty package input')
+ 
+ 
++def record_radio_profile(payload, profile):
++    """Bind the selected build profile to the exact relocatable payload bytes."""
++    if profile not in ('combined', 'wifi-only'):
++        raise ValueError('unknown radio profile')
++    payload = Path(payload)
++    data = payload.read_bytes()
++    validate_elf(data)
++    path = payload.parent / 'radio-profile.json'
++    with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as stream:
++        temporary = Path(stream.name)
++        stream.write(canonical(dict(profile=profile, payload_sha256=sha(data))))
++    try:
++        os.replace(temporary, path)
++    finally:
++        temporary.unlink(missing_ok=True)
++
++
++def require_combined_profile(output, payload):
++    """Schema 1 carries combined-radio inputs only; fail closed on stale data."""
++    path = Path(output) / RADIO_PROFILE
++    if not path.is_file():
++        raise ValueError('missing radio profile record; rebuild the radio payload')
++    record = strict_json(path.read_bytes())
++    if record != dict(profile='combined', payload_sha256=sha(payload)):
++        raise ValueError('radio profile is experimental or stale; rebuild combined payload')
++
++
+ def create(root, output, archive, provenance):
+     root, output, archive = Path(root), Path(output), Path(archive)
+-    files = {p: (output / p).read_bytes() for p in ARTIFACTS}
++    payload = (output / RADIO_PAYLOAD).read_bytes()
++    require_combined_profile(output, payload)
++    files = {p: (output / p).read_bytes() for p in ARTIFACTS if p != RADIO_PAYLOAD}
++    files[RADIO_PAYLOAD] = payload
+     files.update({'source/' + p: (root / p).read_bytes() for p in INTERFACES + NOTICES})
+     manifest = dict(schema=SCHEMA, contract=contract(root), provenance=provenance,
+                     files={p: {'sha256': sha(data), 'size': len(data)} for p, data in sorted(files.items())})
+@@ -275,6 +307,9 @@ def capture_provenance(root, idf, radio_compiler, boot_compiler, lp_compiler):
+ def main():
+     parser = argparse.ArgumentParser(description=__doc__)
+     sub = parser.add_subparsers(dest='command', required=True)
++    p = sub.add_parser('record-radio-profile')
++    p.add_argument('--payload', type=Path, required=True)
++    p.add_argument('--profile', choices=('combined', 'wifi-only'), required=True)
+     p = sub.add_parser('provenance')
+     p.add_argument('--root', type=Path, required=True)
+     p.add_argument('--idf', type=Path, required=True)
+@@ -296,7 +331,10 @@ def main():
+                            help='staging only; requires subsequent verify --kernel-source before Linux build')
+     args = parser.parse_args()
+     try:
+-        if args.command == 'provenance':
++        if args.command == 'record-radio-profile':
++            record_radio_profile(args.payload, args.profile)
++            return
++        elif args.command == 'provenance':
+             result = capture_provenance(args.root, args.idf, args.radio_compiler, args.boot_compiler, args.lp_compiler)
+         elif args.command == 'create':
+             data = sys.stdin.buffer.read() if args.provenance == Path('-') else args.provenance.read_bytes()
+diff --git a/tools/build/tests/test_firmware_package.py b/tools/build/tests/test_firmware_package.py
+index 658fe66..1a21501 100644
+--- a/tools/build/tests/test_firmware_package.py
++++ b/tools/build/tests/test_firmware_package.py
+@@ -39,6 +39,7 @@ class PackageTest(unittest.TestCase):
+             for k in ('project', 'esp-idf', 'linux', 'u-boot', 'opensbi')},
+             toolchains={k: 'e' * 64 for k in ('radio', 'boot', 'lp')},
+             license_mode='engineering-only')
++        fw.record_radio_profile(self.out / fw.RADIO_PAYLOAD, 'combined')
+         self.archive = self.base / 'inputs.tar'
+         self.manifest = fw.create(self.root, self.out, self.archive, self.provenance)
+ 
+@@ -198,13 +199,35 @@ class PackageTest(unittest.TestCase):
+         struct.pack_into('<H', data, 16, 2)
+         path.write_bytes(data)
+         with self.assertRaisesRegex(ValueError, 'relocatable'):
+-            fw.create(self.root, self.out, self.archive, self.provenance)
++            fw.record_radio_profile(path, 'combined')
+ 
+     def test_public_release_rejected(self):
+         self.provenance['license_mode'] = 'public'
+         with self.assertRaisesRegex(ValueError, 'redistribution'):
+             fw.create(self.root, self.out, self.archive, self.provenance)
+ 
++    def test_experimental_radio_rejected(self):
++        fw.record_radio_profile(self.out / fw.RADIO_PAYLOAD, 'wifi-only')
++        before = self.archive.read_bytes()
++        with self.assertRaisesRegex(ValueError, 'experimental or stale'):
++            fw.create(self.root, self.out, self.archive, self.provenance)
++        self.assertEqual(before, self.archive.read_bytes())
++
++    def test_missing_radio_profile_rejected(self):
++        (self.out / fw.RADIO_PROFILE).unlink()
++        with self.assertRaisesRegex(ValueError, 'missing radio profile'):
++            fw.create(self.root, self.out, self.archive, self.provenance)
++
++    def test_stale_radio_profile_rejected(self):
++        path = self.out / fw.RADIO_PAYLOAD
++        path.write_bytes(path.read_bytes() + b'different payload')
++        with self.assertRaisesRegex(ValueError, 'experimental or stale'):
++            fw.create(self.root, self.out, self.archive, self.provenance)
++
++    def test_invalid_radio_profile_rejected(self):
++        with self.assertRaisesRegex(ValueError, 'unknown radio profile'):
++            fw.record_radio_profile(self.out / fw.RADIO_PAYLOAD, 'unknown')
++
+     def test_final_kernel_pairing_not_part_of_schema(self):
+         self.assertNotIn('radio.bin', '\n'.join(fw.MEMBERS))
+         self.assertNotIn('kernel', self.manifest['contract'])
+-- 
+2.43.0
+
