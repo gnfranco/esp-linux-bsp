@@ -134,3 +134,48 @@ addresses partial-copy register-state normalization independently.
 Its dedicated Linvora build and hardware requalification are separate
 from this stability issue. The v1 stability issue is not evidence that
 F-only v2 is correct; neither qualifies a new production image.
+
+## RAM-only MM workload
+
+A separate `anon-vma-stress.c` exercises populated anonymous mappings,
+fork, concurrent parent/child middle-page mprotect split and restore,
+and verifies copy-on-write isolation. Two workers, bounded to 1–256
+cycles each (each cycle forks a child). No filesystem or peripheral
+writes in the workload; gzip ELF transferred through the established
+UART helper into tmpfs with end-to-end SHA-256 verification.
+
+Host reference: 64 cycles passed on Linvora-dev (native x86-64).
+Cross build: Espressif RV32 GCC 15.2.0-5, linked statically with
+`-march=rv32imac -mabi=ilp32 -O2 -Wall -Wextra -Werror`. ELF32,
+RVC, soft-float ABI; note the toolchain's prebuilt libc contributes F
+and B attributes and B instructions even with those compile flags.
+Disassembly screening found no FP instruction mnemonics; this is
+not an ISA-pure RV32IMAC binary and should not be generalized to
+other processors lacking the library's instructions.
+
+    riscv32-esp-linux-musl-gcc -march=rv32imac -mabi=ilp32 \
+        -static -O2 -Wall -Wextra -Werror \
+        experiments/s31-reboot/anon-vma-stress.c -o anon-vma-stress
+
+Stripped ELF SHA-256:
+`89e4f6e09673fb44de55aeac1253479f0f377bea3ac05386d8ec721efd00ba9b`.
+Gzip SHA-256:
+`019dc22917719dd16f2be728a19bd6d534c0085eaf49eb8dd97309a49c54b9ea`.
+
+Physical execution on **original Lab v1** after successful flash
+verification and recovery, two online harts, no F advertised,
+10,308 KiB MemAvailable before transfer:
+
+| Cycles per worker | Total | Result |
+|---:|---:|---|
+| 16 | 32 | PASS |
+| 64 | 128 | PASS |
+| 256 | 512 | PASS |
+
+672 cycles total, including copy-on-write equality checks. No Oops,
+panic or illegal instruction in this test's captured UART. These
+results do not exclude a race, a boot-specific workload or a
+timing/state-dependent corruption. The first failure occurred while
+booting esp-example-tar, not while running this synthetic workload.
+The test result demonstrates that the split/fork/mprotect path is
+not invariably broken in steady-state. No flash was modified.
