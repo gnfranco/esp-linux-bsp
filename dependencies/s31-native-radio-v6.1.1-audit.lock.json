@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "profile": "s31-radio-audit-only",
+  "esp_idf": {
+    "tag": "v6.1.1",
+    "commit": "051e4c4eb20346e043cdd47bc388fde75ff8af63",
+    "wifi_osi_version": 9,
+    "coex_osi_version": 2
+  },
+  "sources": {
+    "esp-coex-lib": "c758e7b56e0fa22177a0539796e1df59978dc322",
+    "esp32s31-bt-lib": "461f4cbeb67ced6a8e7f3bcf377b04dd78b2adb8",
+    "esp-phy-lib": "20f1db053a0e6cb9f1c09d255c43bf42483041d0",
+    "esp32-wifi-lib": "ec08f0cee472c46e9e9c2c5f8180f74653e8c2dd"
+  },
+  "archive_sha256": {
+    "esp-coex-lib/esp32s31/libcoexist.a": "13b1e1d2a1550400ddb2622648933288aee6a285d3aad454978314c4af685147",
+    "esp32s31-bt-lib/libble_app.a": "bc6ab3a053c802e4849cd190d2b050493373590d7a76b2d7f8347109cd7b9dfd",
+    "esp32s31-bt-lib/libbredr_app.a": "c8c5c31694094c6658246d15c954d60443ac535989950769bd77e36f1075ae07",
+    "esp32s31-bt-lib/libbtdm_common.a": "5fb8ada397eab2fe93212bbc9a2a07bd4ff6fe3b62debd41cced46b89c230720",
+    "esp-phy-lib/esp32s31/libphy.a": "116c7c3a55e2ddfd7937edad2667b5d64717f1967519a0201ca6354246f0b1a2",
+    "esp-phy-lib/esp32s31/libbtbb.a": "9bd762f68df0c894d27c542f01591aad21ee800b69fd6403c8ec6226ceaa8895",
+    "esp32-wifi-lib/esp32s31/libpp.a": "7d64d8c2287d303b0dbe7fa66869d14a5ce604380ab6f1736e619e92a0e5d2e2",
+    "esp32-wifi-lib/esp32s31/libcore.a": "89391a29599be5e1c09d22789caaa52606a63cf5829f4173d18fd10d748461ff",
+    "esp32-wifi-lib/esp32s31/libnet80211.a": "8b20e598dc382af4e1deb50563d77ca930a9944b48a49c75bcaedb26637afb4b"
+  }
+}
