@@ -1,6 +1,6 @@
 # ESP32-S31: experimental RV32 F-only qualification (2026-11-26)
 
-Status: prototype, not production. No flash writes, no changes to S31 Lab v1.
+Status: experimental prototype, initial F-only hardware qualification passed. The candidate was tested temporarily and S31 Lab v1 was restored and verified.
 
 ## Why
 
@@ -94,7 +94,7 @@ and a compatible trusted UART helper implementing shell and command
 (see experiments/s31-native-radio/run-uart.py). It verifies the baseline,
 uses RAM, and expects status 77; it is not the candidate runner.
 
-## Next qualification gate
+## Initial qualification plan (before physical testing)
 
 1. Review S31 F capability, OpenSBI FS initialization, boot hart ISA and
    errata; create a separate DT candidate declaring F only after validation.
@@ -177,7 +177,112 @@ reads misa and sets MSTATUS_FS if it detects F or D; this source check
 does not establish that both physical harts have usable F or that FS
 transitions are correct. Candidate artifacts and build logs remain on Orion:
 `~/source/build/s31-lab-f-only-pinned-20261126/` and
-`~/source/build/s31-lab-f-only-dtb-20261126/`. No candidate has been
+`~/source/build/s31-lab-f-only-dtb-20261126/`. At this build-only checkpoint, no candidate had been
 booted or written to flash. All v1 rollback SHA256SUMS passed, and
 the UART was free at the end of the session. The experimental
 candidate is not a production image or a release.
+
+## Physical F-only qualification (Orion, 2026-11-26)
+
+The candidate XIP and isolated DTB from the preceding section were
+tested on the Function-CoreBoard-1 (rev 0.0) using the official
+S31 Lab v1 SPL, U-Boot/OpenSBI and CramFS rootfs. Before the experiment,
+all five existing flash artifacts were verified against the released
+v1 image with esptool 5.3.1. The UART was confirmed free.
+Only the DTB (0x300000) and XIP kernel (0x500000) were written.
+Both were digest-verified before boot. No radio payload or credentials
+were transferred.
+
+Boot evidence:
+
+```text
+Linux version 6.18.0+
+riscv: base ISA extensions acfim
+riscv: ELF capabilities acfim
+0-1
+mtd:rootfs / cramfs ro,relatime 0 0
+isa : rv32imafc_zicsr_zifencei_zaamo_zalrsc_zca_zcf
+isa : rv32imafc_zicsr_zifencei_zaamo_zalrsc_zca_zcf
+MemAvailable: 10356 kB
+F_ONLY_CANDIDATE_BOOT_PASS
+```
+
+The exact same stripped soft-float diagnostic as the baseline
+(SHA-256 `e12c92fff0bc61dba0551809f5c2105d1b3ab4d414883e0dfcedfee5b1185607`)
+was transported in RAM and digest-verified on target. Its output:
+
+```text
+HWCAP=0x1125 F=1 D=0 HWPROBE_FD=0
+FADD_PASS hart=0
+FADD_PASS hart=1
+SIGNAL_PASS
+SMP_CONTEXT_PASS seed=3 harts=0,1
+SMP_CONTEXT_PASS seed=4 harts=0,1
+PTRACE_PASS
+S31_F_ONLY_PASS
+F_ONLY_HARDWARE_PASS
+```
+
+The suite tested preservation of all 32 32-bit registers and FCSR across
+signal delivery and restoration, plus two independent processes with
+128 affinity/check iterations each. It validated ptrace GET/SETREGSET,
+including discarding sentinel high words and zero padding on the returned
+64-bit slots. This confirms the experimental F-only context path on
+this board, not a generic ABI decision or support for D.
+The test executable was removed from RAM.
+
+Regression smoke checks passed: two online harts, Ethernet interface
+presence, RGB LED sysfs presence, GPIO character device, I2C adapter,
+ES8311 identification registers (0x83 0x11 0x01), read-only USB mass
+storage read (64 blocks of 4096 bytes), disabled physical CAN controllers
+as expected for the default DTB, and three successful loopback pings.
+Ethernet DHCP/external traffic, active RGB control, CAN loopback,
+candidate software reboot, long-duration FP stress, signal frame
+mutation, core dumps, D/no-F regressions and actual ILP32F radio
+execution remain separate qualification gates. The USB device emitted
+an alternate GPT invalid/primary GPT selected warning; no disk content
+was modified. No kernel panic/oops was seen in the captured candidate
+UART log.
+
+The candidate runner is now in `experiments/s31-fpu/run-candidate.py`.
+It asserts the exact candidate profile and per-test markers and captures
+a local serial trace. Example (with a verified candidate already booting
+on the bench; do not use it as a flashing tool):
+
+```sh
+python3 experiments/s31-fpu/run-candidate.py \
+  --helper /path/to/trusted/run-uart-final.py \
+  --gzip /path/to/fpu-test.gz \
+  --sha256 e12c92fff0bc61dba0551809f5c2105d1b3ab4d414883e0dfcedfee5b1185607 \
+  --log /path/to/new-candidate-uart.log
+```
+
+Raw logs and the guarded, bench-specific flash/rollback script are retained
+on Orion under `~/source/build/s31-f-only-hardware-20261126/`.
+No raw UART logs, flash dumps, machine identifiers, or private data are
+published.
+
+### Rollback confirmation
+
+The guarded script restored both original v1 components and verified all
+five v1 artifact digests against the physical flash. The board booted
+the restored dual-core CramFS profile and the exact same diagnostic
+returned status 77, as intended:
+
+```text
+RESTORE_WRITE_PASS
+RESTORE_ALL_SLOTS_PASS
+HWCAP=0x1105 F=0 D=0 HWPROBE_FD=0
+FPU_NOT_ADVERTISED: hardware opcodes not executed
+FPU_BASELINE_PASS
+TARGET_ARTIFACT_REMOVED
+RESTORE_BASELINE_PASS
+```
+
+The complete guarded session returned exit status 0; UART was free after
+the run. The signed-off v1 rollback files were not modified.
+Local evidence digests (logs themselves are not distributed):
+
+- candidate-test.log: `205457858cb05264d0a3e8cb3e1b3a81ae7db3319491810bb25cc9ef6ef8502f`
+- restore-verify.log: `076a07aad5a3bc750c402383fcf0fb78ac545b15b49373a32b4e2d6fab435710`
+- baseline-restored.log: `3c12d6d994b36383d170e2a8f4596695edd990d3e638c0b69993ad77e0cdaa13`
