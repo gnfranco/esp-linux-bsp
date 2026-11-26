@@ -1,0 +1,75 @@
+{
+  "profile": "s31-lab-v1-peripherals",
+  "board": "ESP32-S31 Function-CoreBoard-1 rev 0.0, 16 MiB NOR / PSRAM",
+  "linux_commit": "9b41c9c5df88ed883b05662187e431bb3452e491",
+  "linux_tree": "f179d36a9a2bf63733fd4d0567d174c82e96c545",
+  "uboot_commit": "7c053400864fbe0e8479a5ab6cebfa57441e906c",
+  "opensbi_commit": "0940d8a5834d02b93e2be0e60ef6505767862875",
+  "buildroot_commit": "7ce1b3ce0234fee7825373784d55b8abe247a550",
+  "buildroot_external_commit": "de2f5a653ec184c5454a380872e30fa491f7b933",
+  "inputs": {
+    "u-boot-spl-dtb.bin": "4c3d7a579270be8e008c9db2ff623f2dce31c085b19b3b66b5bdc7ad89d17e84",
+    "u-boot.itb": "89434b08fc88f65a66539bae8e41e7bb884bf77667b0f2fe6b5c1f8009fbe818",
+    "rootfs.cramfs": "0e68103aafeefdbdb22202b9a950edc04a6c96734d1e12af4431ebdad2fee086",
+    "xipImage": "5fe191d8e189a229f68848791bdb22b851b1b1922ca3f4b0a150030ba0f406ed",
+    "esp32s31-function-core-board-1.dtb": "121ff20b8e36135032b7e21ee27673a20e6994490dd9890c2a382923c74a016e",
+    "esp32s31-function-core-board-1-test-generic.dtbo": "ec21e1125620be522fc7aed123f0aa325d0a30592472c60b58630561393970f1",
+    "esp32s31-function-core-board-1-test-can-loopback.dtbo": "997d82130c54890c4c132d17d4a878156ab8b3c2415baa59f56a845098ad4b57"
+  },
+  "slots": [
+    {
+      "file": "spl_app.bin",
+      "offset": "0x002000",
+      "size": 39040,
+      "capacity": 1040384,
+      "sha256": "a24730be76890fbb373e876a81a4ed00aec2cbd6d650f3704e2e6e5d88fe5053"
+    },
+    {
+      "file": "u-boot.itb",
+      "offset": "0x100000",
+      "size": 259432,
+      "capacity": 2097152,
+      "sha256": "89434b08fc88f65a66539bae8e41e7bb884bf77667b0f2fe6b5c1f8009fbe818"
+    },
+    {
+      "file": "esp32s31-function-core-board-1.dtb",
+      "offset": "0x300000",
+      "size": 10592,
+      "capacity": 2097152,
+      "sha256": "090508d75505c389b915dd868b49c180650ec066876a803ae28394bc644eac42"
+    },
+    {
+      "file": "xipImage",
+      "offset": "0x500000",
+      "size": 4294412,
+      "capacity": 7340032,
+      "sha256": "5fe191d8e189a229f68848791bdb22b851b1b1922ca3f4b0a150030ba0f406ed"
+    },
+    {
+      "file": "rootfs.cramfs",
+      "offset": "0xc00000",
+      "size": 3502080,
+      "capacity": 4194304,
+      "sha256": "0e68103aafeefdbdb22202b9a950edc04a6c96734d1e12af4431ebdad2fee086"
+    }
+  ],
+  "image": {
+    "file": "s31_full_flash.bin",
+    "bytes": 16084992,
+    "sha256": "fd3ced2b7775b77969ed3b947b26635f97d7325209ecfafaae81b7aafd6275c4"
+  },
+  "can_selftest_dtb": {
+    "file": "board-can-selftest.dtb",
+    "sha256": "87c8fe870ac985f707aed9974f649d3486ceae12ae987bc597d84a8ce0126106",
+    "offset": "0x300000",
+    "requires_unconnected_pads": [
+      35,
+      36
+    ]
+  },
+  "limitations": [
+    "No native Wi-Fi or Bluetooth in this image",
+    "CAN transceiver/bus remains unvalidated",
+    "CAN controllers disabled in the default DTB"
+  ]
+}

@@ -15,6 +15,10 @@ See [S31 baseline 2026-11-25](docs/esp32s31/BASELINE-20261125.md) for pinned com
 
 See [peripheral validation](docs/esp32s31/USB-I2C-CAN-QA-20261126.md), including real on-board I2C, USB mass storage and CTU CAN FD controller loopback results. The differential CAN bus and integrated radio image are pending.
 
+## S31 Lab v1 — own engineering image
+
+See [S31 Lab v1](docs/esp32s31/LAB-IMAGE-V1.md) for the pinned BSP, assembly, flash map and safe CAN test profile used by the application labs. This image does not yet include native Wi-Fi/Bluetooth.
+
 ## Optional native Wi-Fi engineering profile
 
 See [Wi-Fi profile](docs/esp32s31/WIFI-PROFILE.md) and [dependency lock](dependencies/s31-wifi.lock.json). This profile is separate from the vendor baseline and is not a redistributable release.
