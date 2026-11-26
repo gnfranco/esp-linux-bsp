@@ -1,0 +1,39 @@
+--- a/example/a2dp_sink_demo.c
++++ b/example/a2dp_sink_demo.c
+@@ -175,7 +175,8 @@
+ // WAV File
+ #ifdef STORE_TO_WAV_FILE
+ static uint32_t audio_frame_count = 0;
+-static char * wav_filename = "a2dp_sink_demo.wav";
++static uint32_t qa_packets, qa_sbc_frames;
++static char * wav_filename = "/tmp/s31-qa-pcm.wav";
+ #endif
+ 
+ // SBC Decoder for WAV file or live playback
+@@ -585,6 +586,7 @@
+     sbc_decoder_instance->configure(&sbc_decoder_context, SBC_MODE_STANDARD, handle_pcm_data, NULL);
+ 
+ #ifdef STORE_TO_WAV_FILE
++    audio_frame_count = qa_packets = qa_sbc_frames = 0;
+     wav_writer_open(wav_filename, configuration->num_channels, configuration->sampling_frequency);
+ #endif
+ 
+@@ -648,6 +650,8 @@
+ 
+ #ifdef STORE_TO_WAV_FILE                 
+     wav_writer_close();
++    printf("QA_PCM packets=%u expected_sbc=%u good=%d bad=%d zero=%d pcm_frames=%u\n", qa_packets, qa_sbc_frames, sbc_decoder_context.good_frames_nr, sbc_decoder_context.bad_frames_nr, sbc_decoder_context.zero_frames_nr, audio_frame_count);
++    fflush(stdout);
+     uint32_t total_frames_nr = sbc_decoder_context.good_frames_nr + sbc_decoder_context.bad_frames_nr + sbc_decoder_context.zero_frames_nr;
+ 
+     printf("WAV Writer: Decoding done. Processed %u SBC frames:\n - %d good\n - %d bad\n", total_frames_nr, sbc_decoder_context.good_frames_nr, total_frames_nr - sbc_decoder_context.good_frames_nr);
+@@ -706,6 +710,9 @@
+     const btstack_audio_sink_t * audio = btstack_audio_sink_get_instance();
+     // process data right away if there's no audio implementation active, e.g. on posix systems to store as .wav
+     if (!audio){
++        if (!media_initialized || packet_length <= 0 || !sbc_header.num_frames) return;
++        qa_packets++; qa_sbc_frames += sbc_header.num_frames;
++        sbc_decoder_instance->decode_signed_16(&sbc_decoder_context, 0, packet_begin, packet_length);
+         return;
+     }
+ 

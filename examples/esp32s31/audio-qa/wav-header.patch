@@ -1,0 +1,18 @@
+--- a/platform/posix/wav_util.c
++++ b/platform/posix/wav_util.c
+@@ -86,13 +86,13 @@
+     /* write RIFF header */
+     fwrite("RIFF", 1, 4, wav_file);
+     // num_samples = blocks * subbands
+-    uint32_t data_bytes = (uint32_t) (write_with_bytes_per_sample * total_num_samples * num_channels);
++    uint32_t data_bytes = (uint32_t) (write_with_bytes_per_sample * total_num_samples);
+     little_endian_fstore_32(wav_file, data_bytes + 36); 
+     fwrite("WAVE", 1, 4, wav_file);
+ 
+     int byte_rate = sample_rate * num_channels * write_with_bytes_per_sample;
+     int bits_per_sample = 8 * write_with_bytes_per_sample;
+-    int block_align = num_channels * bits_per_sample;
++    int block_align = num_channels * write_with_bytes_per_sample;
+     int fmt_length = 16;
+     int fmt_format_tag = 1; // PCM
+ 
