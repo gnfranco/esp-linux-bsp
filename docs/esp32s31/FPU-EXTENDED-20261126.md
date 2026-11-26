@@ -214,3 +214,37 @@ The private v1 release archive is now in
 `452b333dfa1b1ccf23ab127855eef8c2ac74f5d72008d38d4c95b43dc963b4f7`,
 matching the Orion archive. All internal component hashes passed.
 No dependency on Orion for source, toolchain or rollback artifacts.
+
+## Linvora-dev v2 build complete
+
+Linux branch `experiment/s31-lab-f-only-v2`, commit
+`060679ff35be74800f0fcb792296e01e5ff524ee`, normalizes FP
+state even when a user copy faults after a partial write in ptrace
+or sigreturn. Patch check and full cross-build `xipImage dtbs`
+succeeded on Linvora-dev using the pinned GCC 14.1.1 toolchain,
+with the release kernel config plus only RISCV_EXPERIMENTAL_F_ONLY.
+No compiler warnings in the captured log; wall time ~25.3 min
+on the existing container CPU quota. No host or isolation changes.
+
+| Artifact | SHA-256 |
+|---|---|
+| xipImage | `461e97f16e7b8e362e83e4e7f6048c3e0e42c1b1a2eeb7306b6ce4a4d90f5f47` |
+| .config | `ea4ef1490fb8054f16ad970e72df37f0adeae361ff84096c77bee5c593c20500` |
+| F-only board DTB (v1 overlay) | `782fb1aa5af5af721aeae84d84e83e75331d05eea0ef5862d8cfcaa23a85529d` |
+
+XIP image 4,294,412 bytes, identical size to Lab v1; kernel slot
+7,340,032 bytes, 3,045,620 bytes spare. XIP physical address
+0x40400000. Candidate DTB independently regenerated on Linvora
+using v1's pinned DTB and kernel-built dtc/fdtoverlay: only the
+two hart ISA descriptions differ, exact hash match to the earlier
+tested overlay.
+
+Artifacts retained on Linvora-dev:
+`~/deps/s31-research/kernel-f-only-v2-build/` (including vmlinux,
+System.map, config, build log, checksums, DTBs) and
+`~/deps/s31-research/f-only-v2-dtb/`. The candidate has **not**
+been flashed or physically requalified. Do not confuse the prior
+v1 F-only hardware results with v2 build success. The Lab v1
+reference remains flashed and has passed all five digest checks.
+The new baseline boot-fault audit and steady-state MM test are in
+[BOOT-FAULT-SCREEN-20261126.md](BOOT-FAULT-SCREEN-20261126.md).
