@@ -4,6 +4,8 @@
 import argparse, importlib.util, pathlib, re, subprocess, time
 import serial
 
+LIST_EVENT = re.compile(rb"list_(?:add|del) corruption|list_add double add")
+
 class LoggedSerial(serial.Serial):
     def read(self, size=1):
         data=super().read(size)
@@ -17,22 +19,23 @@ def free(port):
 
 def wait_shell(s,seconds=25):
     deadline=time.monotonic()+seconds
-    buf=b""; sent=False; saw_oops=False; probe=time.monotonic()+15
+    buf=b""; sent=False; saw_oops=False; saw_list=False; probe=time.monotonic()+15
     while time.monotonic()<deadline:
         buf+=s.read(s.in_waiting or 1)
         clean=buf.replace(b"\r",b"").replace(b"\0",b"")
+        saw_list |= bool(LIST_EVENT.search(clean))
         if re.search(rb"Oops \[#\d+\]|Unable to handle kernel", clean):
             saw_oops=True
         if b"Kernel panic - not syncing" in clean:
-            return "KERNEL_PANIC"
+            return "LIST_WARNING_PANIC" if saw_list else "KERNEL_PANIC"
         if re.search(rb"(?m)^~ #\s*$",clean):
-            return "KERNEL_OOPS" if saw_oops else "ROOT"
+            return "LIST_WARNING" if saw_list else ("KERNEL_OOPS" if saw_oops else "ROOT")
         if not sent and re.search(rb"login:\s*$",clean):
             s.write(b"root\r"); sent=True; buf=b""
         if time.monotonic()>probe:
             s.write(b"\r");probe=time.monotonic()+5
         buf=buf[-32768:]
-    return "KERNEL_OOPS" if saw_oops else "TIMEOUT"
+    return "LIST_WARNING" if saw_list else ("KERNEL_OOPS" if saw_oops else "TIMEOUT")
 
 def main():
     p=argparse.ArgumentParser()
@@ -43,8 +46,12 @@ def main():
     p.add_argument("--out",type=pathlib.Path,required=True)
     p.add_argument("--warm",type=int,default=10)
     p.add_argument("--hard",type=int,default=10)
+    p.add_argument("--settle",type=float,default=0,help="fixed wait after root profile before each reboot")
+    p.add_argument("--expected-cmdline",default=None,help="require exact kernel command line")
+    p.add_argument("--recover-initial",action="store_true",help="one read-only recovery if initial boot fails")
+    p.add_argument("--stop-on-list-warning",action="store_true")
     a=p.parse_args()
-    if not 0<=a.warm<=20 or not 0<=a.hard<=20: raise SystemExit("invalid trial count")
+    if not 0<=a.warm<=20 or not 0<=a.hard<=20 or not 0<=a.settle<=30: raise SystemExit("invalid trial count")
     a.out.mkdir(mode=0o700)
     spec=importlib.util.spec_from_file_location("helper",a.helper)
     h=importlib.util.module_from_spec(spec);spec.loader.exec_module(h)
@@ -57,8 +64,10 @@ def main():
     def close(s):
         s.close();s.log.close()
     def profile(s):
-        out,_=h.command(s,"uname -m; cat /sys/devices/system/cpu/online; grep ' / ' /proc/mounts; grep '^isa' /proc/cpuinfo; cat /proc/sys/kernel/random/boot_id")
+        out,_=h.command(s,"uname -m; cat /sys/devices/system/cpu/online; grep ' / ' /proc/mounts; grep '^isa' /proc/cpuinfo; cat /proc/cmdline; uname -v; cat /proc/sys/kernel/random/boot_id")
         lines=out.splitlines()
+        if a.expected_cmdline is not None and a.expected_cmdline not in lines:
+            raise RuntimeError("wrong kernel command line")
         if "riscv32" not in lines or "0-1" not in lines or " / cramfs ro" not in out: raise RuntimeError("wrong profile")
         isa=[x for x in lines if x.startswith("isa")]
         if len(isa)!=2 or not all("rv32imac_" in x for x in isa): raise RuntimeError("expected v1 no-F")
@@ -93,12 +102,19 @@ def main():
     s=connect("initial")
     counters={}
     try:
-        if wait_shell(s)!="ROOT": raise RuntimeError("initial shell not confirmed")
-        prev=profile(s)
+        initial=wait_shell(s)
+        if initial!="ROOT":
+            print("INITIAL_BOOT",initial,flush=True)
+            if not a.recover_initial: raise RuntimeError("initial shell not confirmed")
+            close(s);s=None
+            s,prev=recover("initial-recovery")
+        else:
+            prev=profile(s)
         for typ,n in (("WARM",a.warm),("ROM_RTS",a.hard)):
             count={}
             for i in range(1,n+1):
                 name=f"{typ.lower()}-{i:02d}"
+                time.sleep(a.settle)
                 t=time.monotonic()
                 if typ=="WARM":
                     # Do not reopen UART on warm reboot; opening it can reset the board.
@@ -115,6 +131,11 @@ def main():
                 else:
                     close(s);s=None
                     s,prev=recover(name+"-recovery")
+                    if a.stop_on_list_warning and result.startswith("LIST_WARNING"):
+                        counters[typ]=count
+                        print("REBOOT_SCREEN_SUMMARY",counters,flush=True)
+                        print("STOP_ON_LIST_WARNING",name,flush=True)
+                        return
             counters[typ]=count
         print("REBOOT_SCREEN_SUMMARY",counters,flush=True)
         print("FINAL_BASELINE_PASS",flush=True)
