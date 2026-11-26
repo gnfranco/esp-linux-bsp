@@ -157,5 +157,46 @@
       "wpa-gatt.log": "45f4b62ab6019a522d2814fa9e30142b134cf0747bcc858626bb124883162a7d",
       "restore.log": "ab9923617c4bc79a643ebf5fe8b7641738210176e91766da004b19273fe2f5cc"
     }
+  },
+  "final_review_validation": {
+    "status": "hardware connectivity validated; RFC review only",
+    "mode": "combo",
+    "radio_sha256": "92c888ee18fee84ddd065b62029e783a04e7e0c284518ee8b0ef2c3afb2de87a",
+    "default_ccmp": {
+      "legacy_tkip": false,
+      "pairwise": "CCMP",
+      "group": "CCMP",
+      "association": "PASS",
+      "dhcp": "PASS",
+      "pre_audio_gateway_icmp": "15/15",
+      "post_audio_gateway_icmp": "5/5"
+    },
+    "classic": {
+      "discovery": "PASS",
+      "pairing": "PASS",
+      "connection": "PASS",
+      "a2dp_transport_active": "PASS",
+      "receiver_sbc_configuration": "PASS; 44100 Hz stereo",
+      "receiver_stream_start_release": "PASS",
+      "avrcp": "PASS",
+      "pcm_decode_integrity_and_physical_output": "NOT MEASURED",
+      "demo_pairing": "demo auto-accepts SSP confirmation; not production authentication policy"
+    },
+    "remaining_review_gates": [
+      "throughput and periodic group rekey not tested",
+      "pairwise TKIP rejected by AP status 18",
+      "no enterprise authentication claim",
+      "advertising stop not independently verified",
+      "firmware packaging provenance gate",
+      "kernel style and trace cleanup before merge"
+    ],
+    "evidence_sha256": {
+      "ccmp_audio_log": "c1ab7617e62e11c7d21164bad1591dc14e392bf6b8974e2a60ceea24027be915",
+      "ccmp_first_test_log": "a82a3dc0ad90ec8c37f389531990b14fc2485170750950521283aaa351dd206f"
+    },
+    "upstream_review": [
+      "https://github.com/GrieferPig/esp32-s31-linux-firmware/pull/1",
+      "https://github.com/GrieferPig/linux-esp32-s31/pull/3"
+    ]
   }
 }

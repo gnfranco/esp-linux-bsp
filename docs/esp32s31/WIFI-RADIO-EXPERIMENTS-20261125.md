@@ -40,3 +40,12 @@ Correction: the earlier combined-payload WPA2 test ran in Wi-Fi-only mode becaus
 ## BLE GATT and IP coexistence follow-up
 
 With verified combo mode, the board completed mixed-cipher WPA2 and DHCP, then accepted a BLE connection from the Orion Intel AX201. The minimal engineering ATT/GATT endpoint returned the expected initial value, accepted an eight-byte synthetic write, and returned the identical updated value. Gateway ICMP during the GATT test was 20/20 with 1,000-byte payloads, zero loss and RTT 9.063/9.897/11.806 ms (min/avg/max). The test does not establish sustained throughput, secure GATT pairing, full GATT conformance, or Classic/A2DP operation. Advertising shutdown was not independently verified. The Classic/A2DP harness did not execute due to a remote execution safety check. Wi-Fi-only radio and rootfs were restored with flash hash verification; post-restore boot remains unchecked.
+
+## Final hardware connectivity review
+
+This section supersedes the provisional limitations in the chronological results above. On the rebuilt combined payload, the default `legacy_tkip=0` driver negotiated WPA2-PSK with CCMP for both pairwise and group traffic, completed DHCP, and passed 15/15 gateway pings before the Bluetooth test and 5/5 afterward. The standard BlueZ flow discovered, paired and connected to the board over BR/EDR. PipeWire was linked directly to the test sink; the A2DP transport entered active state and the receiver logged SBC stereo configuration at 44.1 kHz, stream start and release, and AVRCP control. The BTstack demo auto-accepts SSP confirmation; this is an engineering interoperability test, not a production pairing-security validation. PCM integrity, decoder counters, physical audio output, throughput, periodic group rekey and explicit BLE advertising shutdown remain unverified. The no-EAP experiment is separate. No proprietary binary or private raw log is published.
+
+Upstream RFCs are submitted for review, not production release or merge authorization:
+
+- https://github.com/GrieferPig/esp32-s31-linux-firmware/pull/1 — optional Wi-Fi-only producer profile; packaging provenance remains a release gate.
+- https://github.com/GrieferPig/linux-esp32-s31/pull/3 — default-off software TKIP interoperability; style/diagnostic trace cleanup and maintainer review remain merge gates.
