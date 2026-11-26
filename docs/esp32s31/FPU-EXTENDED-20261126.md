@@ -164,3 +164,37 @@ physical bench while available.
   shell sandbox cannot create user namespaces in this container.
   Authorized read-only file access is available. Do not disable
   sandbox protections or change host namespace settings to run it.
+
+## Independent Codex CLI reliability review
+
+Codex CLI 0.172.0 was invoked with read-only sandbox and a sanitized
+technical summary. The initial broad review could not complete
+(container user-namespace restriction and a platform filter). Without
+changing security settings, a second task reviewed only supplied
+reboot observations and relevant source excerpts via stdin. Completed
+successfully and produced a reliability decision: retain Lab v1;
+candidate not ready for reboot-dependent work.
+
+The reviewer independently confirmed that the traces locate a
+null VMA argument in the anonymous-VMA interval-tree path, not the
+origin of the invalid pointer. They do not establish that two harts
+modified the same node or even the same tree. The proposed initial
+matrix is 10 attempts per variant/condition: v1 vs candidate,
+power-cycle with 2 harts, software reboot with 2 harts, software
+reboot with 1 hart. Add no-F candidate as a control and distinguish
+reset that never reaches boot vs early-kernel failure vs init timeout.
+Power-cycle and one-hart controls require bench capability; do not label
+a serial RTS reset as full power-cycle.
+
+Keep serial evidence from reset request to final init marker, exact
+artifact/config hashes and CPU count, first exception and symbolized
+stack. A small zero-failure sample is screening, not reliability
+qualification. Use separate integer/FP stress as additional factors
+after establishing the no-load reboot baseline. Don't modify the VMA
+tree implementation based on a single failure.
+
+Review workflow: run Codex with `--ephemeral -s read-only` in the
+kernel checkout; pipe a curated technical context on stdin, request
+analysis only, save final review in a private scratch report. The
+container prohibits unprivileged user namespaces, so do not disable
+sandbox or change the production host to enable CLI shell operations.
