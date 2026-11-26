@@ -49,3 +49,13 @@ Upstream RFCs are submitted for review, not production release or merge authoriz
 
 - https://github.com/GrieferPig/esp32-s31-linux-firmware/pull/1 — optional Wi-Fi-only producer profile; packaging provenance remains a release gate.
 - https://github.com/GrieferPig/linux-esp32-s31/pull/3 — default-off software TKIP interoperability; style/diagnostic trace cleanup and maintainer review remain merge gates.
+
+## Review cleanup and final source integration
+
+The final follow-up patches close the packaging-provenance and kernel-style review gates. Apply `0005-radio-profile-packaging-guard.patch` after `0002-radio-wifi-only.patch` for the Wi-Fi-only producer branch; `0003-radio-no-idf-eap.patch` is a separate historical experiment and has not been requalified with the new guard. Apply `0006-softmac-review-cleanup.patch` after the `0004-softmac-software-tkip.mbox` series. Both follow-up patches replay to the exact committed source trees.
+
+Producer commit `93d624d14aa4d665c091c014ef5619eb994728ec` records the build profile and exact payload SHA-256, and rejects missing, stale or experimental records when creating standard combined-only schema-1 input archives. All 24 package tests pass. Profile switching combined → Wi-Fi-only → combined reproduced the combined relocatable byte for byte. Existing archive verification is unchanged; provenance is not publisher authentication or redistribution authorization.
+
+Kernel commit `9594a0997641415ea8e643b96212d134676dbecb` removes the temporary association trace and fixes style: checkpatch reports zero errors, warnings and checks. The module rebuild succeeded; vmlinux, xipImage and the combined radio image remained identical. The updated rootfs and radio partitions passed flash hash verification. On the board, both default and experimental software-crypto modes booted the updated module, associated via WPA2 CCMP/CCMP, obtained DHCP and passed 15/15 ICMP each. The experimental mode also advertised TKIP. The AP was not changed back to mixed TKIP, and Bluetooth audio was not repeated after this cleanup. Earlier mixed-cipher and Bluetooth results remain attributable to the earlier tested revision. The local engineering rootfs defaults to legacy_tkip=0. All remaining throughput, rekey, physical audio and production qualification limitations remain explicit.
+
+These source changes are integrated in the BSP; upstream merge remains at maintainers’ discretion.
