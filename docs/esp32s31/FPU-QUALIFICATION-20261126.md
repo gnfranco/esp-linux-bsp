@@ -108,3 +108,76 @@ uses RAM, and expects status 77; it is not the candidate runner.
    both harts. Add D/no-F regressions before proposing upstream.
 4. Only after these gates, attempt execution of official radio code which
    requires F. The metadata-only radio probe did not prove RF initialization.
+
+## Lab v1 integration candidate (same day)
+
+The separate integration branch
+[`gnfranco/linux:experiment/s31-lab-f-only`](https://github.com/gnfranco/linux/tree/experiment/s31-lab-f-only)
+is based on the exact v1 kernel tree, not the plain official integration
+branch. Commit `a1b315e2e4ba386693ebb1f2c0ba44ec46fa6aba` cherry-picks
+the prototype onto `9b41c9c5df88ed883b05662187e431bb3452e491`.
+The original branches remain unchanged.
+
+A full `xipImage dtbs` build passed on Orion with the **same pinned**
+Espressif GCC 14.1.1 (esp-linux-14.1.1_20260922) as Lab v1. The
+input config SHA-256 matched the checked-in
+`configs/esp32s31-lab-v1.kernel.config`
+(`71c1077bb6cd8f07a091db0ffd0e7f5bda36ad954cc5bc74bd29960def4f8b38`).
+The only Kconfig delta after olddefconfig was:
+
+```text
++RISCV_EXPERIMENTAL_F_ONLY y
+```
+
+```sh
+# On Orion, using the separate integration worktree:
+cd "$HOME/source/worktrees/s31-lab-f-only"
+out="$HOME/source/build/s31-lab-f-only-pinned-20261126"
+# For reproduction choose a new, empty output directory.
+mkdir "$out"
+cp "$HOME/source/build/s31-ctucanfd-qa-20261126/.config" "$out/.config"
+scripts/config --file "$out/.config" --enable RISCV_EXPERIMENTAL_F_ONLY
+cc="$HOME/source/build/esp32s31/host/opt/ext-toolchain/bin/riscv64-esp-linux-musl-"
+make O="$out" ARCH=riscv CROSS_COMPILE="$cc" olddefconfig
+scripts/diffconfig "$HOME/source/build/s31-ctucanfd-qa-20261126/.config" "$out/.config"
+make -j6 O="$out" ARCH=riscv CROSS_COMPILE="$cc" xipImage dtbs
+```
+
+| Artifact | Bytes | SHA-256 |
+|---|---:|---|
+| Candidate xipImage | 4,294,412 | `1a0476869628008b8027c5554d19423bc9af20bda337e91cf79ec76359ae2b28` |
+| Candidate .config | — | `ea4ef1490fb8054f16ad970e72df37f0adeae361ff84096c77bee5c593c20500` |
+| Candidate DTB | 10,608 | `782fb1aa5af5af721aeae84d84e83e75331d05eea0ef5862d8cfcaa23a85529d` |
+| Test overlay DTBO | 484 | `6e98c879e0dab0b29e2cedfca886aac5ebcf3013410f489c4d60318775a7a87e` |
+
+XIP address remains `0x40400000`. XIP image size equals the released
+v1 size; its SHA differs as expected. The 7 MiB flash slot has 3,045,620
+bytes unused (not a claim of radio space). Disassembly and linked
+symbols confirm all existing D save/restore (32 FSD/32 FLD) and new F
+save/restore (32 FSW/32 FLW) functions. SMP, CAN CTU FD, and RMT LED
+configuration remain enabled; their runtime regressions are still pending.
+
+The optional overlay `experiments/s31-fpu/esp32s31-test-f-only.dtso` is
+not applied to the standard DTB. It declares F (not D) on both harts.
+`build-dtb.sh` applies it offline to the released **post-overlay** v1
+board DTB (SHA-256 `090508d75505c389b915dd868b49c180650ec066876a803ae28394bc644eac42`),
+verifies the input hash, compares disassembled DTBs, and rejects any
+other change. Repeated generation produced an identical candidate DTB.
+No CAN enablement or pin change is introduced.
+
+```sh
+experiments/s31-fpu/build-dtb.sh \
+  "$HOME/source/build/s31-ctucanfd-qa-20261126/scripts/dtc" \
+  "$HOME/source/build/s31-lab-v1-20261126/esp32s31-function-core-board-1.dtb" \
+  /tmp/s31-lab-f-only-dtb
+```
+
+The pinned OpenSBI `0940d8a5834d02b93e2be0e60ef6505767862875`
+reads misa and sets MSTATUS_FS if it detects F or D; this source check
+does not establish that both physical harts have usable F or that FS
+transitions are correct. Candidate artifacts and build logs remain on Orion:
+`~/source/build/s31-lab-f-only-pinned-20261126/` and
+`~/source/build/s31-lab-f-only-dtb-20261126/`. No candidate has been
+booted or written to flash. All v1 rollback SHA256SUMS passed, and
+the UART was free at the end of the session. The experimental
+candidate is not a production image or a release.

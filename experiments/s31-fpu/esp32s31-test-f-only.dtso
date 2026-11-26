@@ -1,0 +1,17 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/dts-v1/;
+/plugin/;
+
+/*
+ * Experimental F-only qualification on a board with verified F hardware.
+ * Do not use this overlay with an unqualified kernel or board.
+ */
+&cpu0 {
+	riscv,isa = "rv32imafc_zicsr_zifencei";
+	riscv,isa-extensions = "i", "m", "a", "f", "c", "zicsr", "zifencei";
+};
+
+&cpu1 {
+	riscv,isa = "rv32imafc_zicsr_zifencei";
+	riscv,isa-extensions = "i", "m", "a", "f", "c", "zicsr", "zifencei";
+};
