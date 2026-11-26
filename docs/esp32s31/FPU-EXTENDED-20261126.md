@@ -198,3 +198,19 @@ kernel checkout; pipe a curated technical context on stdin, request
 analysis only, save final review in a private scratch report. The
 container prohibits unprivileged user namespaces, so do not disable
 sandbox or change the production host to enable CLI shell operations.
+
+## Follow-up: baseline warm reboot also reproduces the failure
+
+After restoration, the original v1 passed three warm reboots and failed
+on the fourth with the same symbolized `vma_last_pgoff` null argument
+and similar anonymous VMA fork/exec paths. No F capability was
+advertised, no FP payload was executed, and no flash was written.
+The recovery RTS reset and baseline check passed.
+See [WARM-REBOOT-ANON-VMA-20261126.md](WARM-REBOOT-ANON-VMA-20261126.md).
+Treat the reboot failure as a separate platform stability issue.
+
+The private v1 release archive is now in
+`~/deps/s31-research/lab-v1-rollback/` on Linvora-dev with SHA-256
+`452b333dfa1b1ccf23ab127855eef8c2ac74f5d72008d38d4c95b43dc963b4f7`,
+matching the Orion archive. All internal component hashes passed.
+No dependency on Orion for source, toolchain or rollback artifacts.
