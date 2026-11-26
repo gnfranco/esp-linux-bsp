@@ -50,8 +50,10 @@ IDF v6.1.1 exists at `051e4c4eb20346e043cdd47bc388fde75ff8af63`.
 All four radio repository pins changed (Wi-Fi `ec08f0cee472`, PHY
 `20f1db053a0e`, coexistence `c758e7b56e0`, BT `461f4cbeb67c`).
 The release/v6.1 tip was `c43d665a96c0d90ea4740fa3ba12aaf89e48e568`.
-The metadata test uses v6.1 as the controlled starting point; re-audit
-v6.1.1 with a separate lock and compare before upgrading. Wi-Fi OSI version
+The metadata test uses v6.1 as the controlled starting point. The newer
+archives were fetched separately and statically audited with
+[an audit-only lock](../../dependencies/s31-native-radio-v6.1.1-audit.lock.json);
+they were not linked into the probe or loaded on the board. Wi-Fi OSI version
 9 and coex OSI version 2 were unchanged in the v6.1.1 headers observed.
 
 ## Architecture evidence and candidates
@@ -105,7 +107,7 @@ or arbitrary DMA pointers as an expedient driver.
 
 ## Critical gate: FPU support, before radio initialization
 
-The whole-archive static audit covers nine archives: 493 ELF32 RISC-V members,
+The whole-archive static audit covers nine archives: 456 ELF32 RISC-V members,
 all RVC + single-float ABI. It observed 9,873 unique global defined symbols,
 5,935 unique strong undefined symbols, and 382 names not defined within this
 selected set (not a final link closure). Examples include ROM function tables,
@@ -115,6 +117,14 @@ Callback tables also hide dependencies that nm alone cannot reveal.
 Floating-point mnemonic occurrences in disassembly: libpp 226; libnet80211
 76; libble_app 20. Zero occurrences in the other six selected archives.
 These are static counts, not proof all are on a relevant execution path.
+
+The parallel v6.1.1 audit found 553 archive members, all still ELF32
+RISC-V single-float ABI: 10,763 unique global definitions, 6,160 unique
+strong undefined names and 403 external names across the selected set.
+The external set gained 34 and lost 13 names. FP mnemonic occurrences
+were 226 (libpp), 34 (libnet80211) and 20 (libble_app). Thus the newer
+release does not remove the FPU gate. No v6.1.1 hardware validation is claimed.
+
 
 The [IDF S31 SOC caps](https://github.com/espressif/esp-idf/blob/fff9895c82d744c7237be8847347bdd1b07c6643/components/soc/esp32s31/include/soc/soc_caps.h)
 declare FPU and the EXT_ILL CSR FLW/FSW reason erratum; IDF
@@ -207,6 +217,16 @@ S31_RADIO_ABI_HARDWARE_PASS
 TARGET_ARTIFACT_REMOVED
 ```
 
+Four completed physical runs returned identical metadata and digest, both
+CPUs online, eth0 present, and target cleanup confirmed. One intervening
+attempt timed out before reaching the shell. Passive serial monitoring then
+confirmed a normal boot and responsive console; the UART runner now waits
+15 seconds before the first probe to avoid disturbing bootloader countdown.
+Two consecutive runs with the final runner passed (post-probe MemAvailable
+10,048 and 9,992 KiB). There is no evidence of a radio/ABI crash in the
+failed attempt; the precise cause of the original console timeout is not
+independently established. UART was free at the final check.
+
 No new flash, no modified baseline, no actual Wi-Fi/BT operation. Presence
 of eth0 is not traffic validation; MemAvailable difference is not a measured
 leak. Full logs and artifact retained privately on respective hosts.
@@ -215,7 +235,7 @@ leak. Full logs and artifact retained privately on respective hosts.
 
 1. Linux FPU/ABI investigation and context integrity, with independent
    experimental kernel worktree. Validate each hart, process switching,
-   signals, ptrace and reboot; retain v1 rollback. Compare v6.1.1 dependencies.
+   signals, ptrace and reboot; retain v1 rollback. Review the v6.1.1 external symbol delta and qualify the actual calls.
 2. Resolve archive-selected call graph, ROM table/ABI and MMIO dependencies
    using official symbols, source and linker map; reject unimplemented services
    rather than stub success. Map interrupt sources, internal memory and clocks.

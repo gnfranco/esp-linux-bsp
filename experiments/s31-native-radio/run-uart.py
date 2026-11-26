@@ -17,7 +17,8 @@ def shell(s):
     deadline = time.monotonic() + 65
     data = b""
     sent_login = False
-    next_probe = time.monotonic() + 5
+    # Opening a CP210x can reset our board. Never interrupt U-Boot autoboot.
+    next_probe = time.monotonic() + 15
     while time.monotonic() < deadline:
         data += s.read(s.in_waiting or 1)
         clean = data.replace(b"\r", b"").replace(b"\0", b"")
