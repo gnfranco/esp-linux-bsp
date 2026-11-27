@@ -1,0 +1,87 @@
+# S31 Lab v1: early DMA alignment experiment
+
+Date: 2026-11-26 (operator local date); build started 2026-11-27 UTC.
+
+Status: experimental; source and object compilation verified. No
+candidate boot, physical qualification, or production release yet.
+
+## Baseline and rationale
+
+See [matched boot diagnostics](BOOT-DEBUG-LIST-MATCHED-20261126.md)
+for the complete USB authorization, hotplug and reboot controls.
+Without the pendrive, 12/12 controlled reboots passed. With it
+present and automatic USB authorization disabled, two of six trials
+had early Oops even before mass-storage binding. Normal USB
+authorization passed six of six in that matched run. These small
+samples neither prove that USB causes memory corruption nor exclude
+physical power or timing effects.
+
+Code review identified an initialization-order inconsistency:
+`setup_arch()` calls `riscv_set_dma_cache_alignment()` before the
+S31 cache driver's `arch_initcall` registers vendor noncoherent
+cache operations. In that interval, the DMA cache alignment can
+be reduced to 1 even on a noncoherent system. The later registration
+does not restore it. This affects slab alignment and the
+size-based bounce decision for small DMA buffers. The release
+enables `CONFIG_DMA_BOUNCE_UNALIGNED_KMALLOC`.
+
+The proposed experiment retains the initial `ARCH_DMA_MINALIGN`
+(64 bytes in this release configuration) specifically when the
+S31 cache driver is configured and the root compatible matches
+`esp,esp32s31`. The existing cache registration and SBI probe are
+unchanged. No change to the DWC2 driver, SMP, OpenSBI, DTB, CramFS
+or flash partitioning is proposed. This does not establish that
+DMA is the cause of the observed Oops, or that the retained
+alignment is sufficient for all S31 DMA masters.
+
+## Pinned experiment
+
+- Linux base: `9b41c9c5df88ed883b05662187e431bb3452e491`
+- Linux branch: `experiment/s31-dma-alignment`
+- Candidate commit: `047a032ddaeb1b6c8354b6fa5aeb0ffe48db0b89`
+- Changed file: `arch/riscv/mm/dma-noncoherent.c` (13 additions)
+- Compiler: Espressif riscv64-esp-linux-musl-gcc 14.1.1
+  (esp-linux-14.1.1_20260922)
+- Configuration: `configs/esp32s31-lab-v1.kernel.config`, unchanged
+  after olddefconfig (identical SHA-256):
+  `71c1077bb6cd8f07a091db0ffd0e7f5bda36ad954cc5bc74bd29960def4f8b38`
+- SMP, XIP, S31 cache driver, SLUB_TINY, DWC2 and DMA bounce remain enabled.
+- `git diff --check` and checkpatch on format-patch: pass;
+  checkpatch 0 errors, 0 warnings.
+- `arch/riscv/mm/dma-noncoherent.o`: built successfully,
+  ELF32 RISC-V relocatable, soft-float ABI.
+- Full `make ARCH=riscv CROSS_COMPILE=... -j1 xipImage dtbs`:
+  started in isolated out-of-tree build; results pending at time of
+  writing.
+
+The candidate source and build are isolated on Linvora-dev in
+`~/worktrees/linux-s31-dma-alignment` and
+`~/deps/s31-research/kernel-v1-dma-alignment-build`. The latter
+contains configure, object and full-build logs, config comparison,
+status record, and (only upon successful build) image checksums.
+Existing branches/worktrees and release artifacts remain intact.
+
+## Bench acceptance gates (not yet executed)
+
+1. Confirm UART availability, original release component hashes,
+   the candidate XIP slot limit, and rollback artifact integrity.
+2. Verify successful candidate boot, the early retained-alignment
+   diagnostic and later vendor cache registration. Confirm the
+   original matched two-hart profile and read-only rootfs.
+3. Compare baseline and candidate using the same pendrive, power
+   supply, reset method, command line, DTB, rootfs, settle time and
+   observation window. Use balanced blocks with the same trial
+   count; record baseline non-reproduction separately.
+4. Record fresh boot IDs, USB enumeration, Oops/panics, list warnings,
+   DMA/cache diagnostics and warm reboot results. Test hotplug and
+   read-only storage access; no mounting or writes. Measure supply
+   voltage/current if equipment is available; no inference of
+   stable power from an absent brownout indication.
+5. Regress Ethernet, USB, I2C, GPIO/RMT, CAN and reboot. Restore
+   release v1 and verify component hashes unless specifically
+   qualifying a new image.
+
+A passing small sample is not proof of causality. Do not submit this
+SoC-specific experiment as a generic RISC-V fix until the mechanism
+and hardware results are validated and the maintainers' preferred
+architecture is established.
