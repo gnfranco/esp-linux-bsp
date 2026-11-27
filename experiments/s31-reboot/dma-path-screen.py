@@ -22,6 +22,7 @@ EVENTS = frozenset(("direct", "force_ok", "force_fail", "addr_ok", "addr_fail",
                     "align_ok", "align_fail", "dwc2_temp_ok", "dwc2_temp_fail"))
 BINS = frozenset(("0-16", "17-32", "33-64", "65-96", "97-127", "128+"))
 DIRECTIONS = frozenset(("bidi", "to", "from"))
+DEVICES = frozenset(("usb", "emac", "other"))
 
 
 def parse_stats(text):
@@ -43,7 +44,8 @@ def parse_stats(text):
                 raise ValueError("invalid row")
             cpu, device, direction, size, event, count = fields
             key = (int(cpu), device, direction, size, event)
-            if (direction not in DIRECTIONS or size not in BINS or
+            if (device not in DEVICES or direction not in DIRECTIONS or
+                    size not in BINS or
                     event not in EVENTS or key in counters or
                     not 0 < int(count) < 2**32-1):
                 raise ValueError("invalid or saturated counter")
@@ -120,12 +122,30 @@ def main():
                 "mount -t debugfs -o ro debugfs /sys/kernel/debug")
             mounted = True
 
+        def boot_id():
+            out = run("cat /proc/sys/kernel/random/boot_id")
+            hits = re.findall(r"(?m)^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$", out)
+            if len(hits) != 1:
+                raise RuntimeError("missing boot identity")
+            return hits[0]
+
+        initial_boot = boot_id()
+
         def snap(name):
             time.sleep(2)
+            if boot_id() != initial_boot:
+                raise RuntimeError("unexpected reboot")
             out = run("cat /sys/kernel/debug/s31_dma_diag/stats")
             stats = parse_stats(out)
             (args.out / (name + ".txt")).write_text(out)
             results[name] = summarize(stats)
+            pools = run("(cd /sys/kernel/debug/swiotlb && "
+                        "for f in io_tlb_nslabs io_tlb_used io_tlb_used_hiwater; do "
+                        "printf '%s=' \"$f\"; cat \"$f\"; done)")
+            values = dict(re.findall(r"(?m)^(io_tlb_(?:nslabs|used|used_hiwater))=(\d+)\s*$", pools))
+            if len(values) != 3:
+                raise RuntimeError("SWIOTLB counters unavailable")
+            results[name + "_pool"] = {k: int(v) for k, v in values.items()}
             return stats
 
         boot = snap("boot")
@@ -144,6 +164,8 @@ def main():
         usb = snap("usb")
         results["usb_delta"] = summarize(delta(idle, usb))
         results["bytes_read"] = 1048576
+        if not any(row["device"] == "usb" for row in results["usb_delta"]):
+            raise RuntimeError("no USB DMA activity observed during read phase")
 
         # Network work is limited to the configured, local bench gateway.
         route = run("ip -4 route show default")
