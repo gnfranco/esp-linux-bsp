@@ -212,3 +212,20 @@ builds. Does not prove the cause of the previous Oops or of the
 first A USB configuration failure, nor timing equivalence with
 the exact production-like candidate. No claim of independent
 trials or definitive fault cure.
+
+Final rollback: complete modified kernel span digest matched,
+all five release component digests matched, original boot profile
+passed, UART free. Private Orion archive
+~/source/build/s31-dma-path-qa-20261127/dma-path-evidence.tar.gz,
+44,939 bytes, SHA-256
+bfd3eb2a66ccb43dae9763884d30fc92266eb5cab7b888b738a1de52fef4e48b.
+No raw logs or media hash samples published.
+
+Readiness: an independent narrow alignment RFC can summarize
+this selected-path evidence and the 42/42 candidate reboot screen,
+with precise caveats. Keep the diagnostic commits outside the
+candidate patch. Ethernet traffic and physical CAN controller
+loopback on the alternate DTB are incomplete in this regression;
+repeat with an authorized connected link and confirmed disconnected
+CAN matrix pads. External ISO 11898-2 and the independent DMA32
+and firmware cache questions remain outside this patch's claims.
