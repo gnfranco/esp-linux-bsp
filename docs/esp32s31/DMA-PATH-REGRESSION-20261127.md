@@ -135,3 +135,15 @@ The experiment/s31-dma-alignment worktree returned to its original
 clean candidate branch and exact candidate artifact verified.
 The two XIPs and pinned collector were transported using a
 private draft, not a release; no raw hardware logs included.
+
+On Orion, the initial hardware preflight rejected comparison of
+the freshly built DTB (10,434 bytes; SHA-256
+121ff20b8e36135032b7e21ee27673a20e6994490dd9890c2a382923c74a016e)
+with the release DTB (10,592 bytes; SHA-256
+090508d75505c389b915dd868b49c180650ec066876a803ae28394bc644eac42).
+Decompilation with the existing kernel DTC showed only the
+release's additional flash@40b00000 mtd-rom rootfs node.
+Corrected the preflight to require each exact hash and byte-equal
+A/B compiled DTBs, plus verification of the original release DTB
+on flash. Only the XIP slot is replaced in either phase; no DTB
+is flashed. No hardware change occurred during rejected preflight.
