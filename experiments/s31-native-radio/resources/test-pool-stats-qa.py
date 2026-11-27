@@ -37,5 +37,20 @@ class PoolParser(unittest.TestCase):
                     encode({k: n for k, n in self.v.items() if k != "peak_pages"})):
             with self.assertRaises(RuntimeError):
                 qa.parse_stats(bad)
+class ConsoleParser(unittest.TestCase):
+    def test_counters(self):
+        self.assertEqual(qa.parse_counters("echo \\nPOOL_IO %s %s %s\n\nPOOL_IO 66240 19 10\n"),
+                         {"usb_sectors_read": 66240, "eth_rx": 19, "eth_tx": 10})
+    def test_counter_reject(self):
+        for out in ("POOL_IO 3 2", "POOL_IO 3 2 1\nPOOL_IO 4 2 1", "POOL_IO -1 2 3"):
+            with self.subTest(out=out), self.assertRaises(RuntimeError):
+                qa.parse_counters(out)
+    def test_ping(self):
+        self.assertEqual(qa.parse_ping("10 packets transmitted, 10 packets received, 0% packet loss"), (10, 10))
+        self.assertEqual(qa.parse_ping("  10 packets transmitted, 9 received, 10% packet loss"), (10, 9))
+    def test_ping_reject(self):
+        for out in ("", "10 packets transmitted, 10 received\n10 packets transmitted, 9 received"):
+            with self.subTest(out=out), self.assertRaises(RuntimeError):
+                qa.parse_ping(out)
 if __name__ == "__main__":
     unittest.main()

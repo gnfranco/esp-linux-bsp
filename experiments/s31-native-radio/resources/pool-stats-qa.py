@@ -39,6 +39,16 @@ def parse_stats(out):
             "inconsistent allocatable extent")
     return v
 
+def parse_counters(out):
+    rows = re.findall(r"(?m)^POOL_IO ([0-9]+) ([0-9]+) ([0-9]+)$", out)
+    require(len(rows) == 1, "I/O counters missing or ambiguous")
+    return dict(zip(("usb_sectors_read", "eth_rx", "eth_tx"), map(int, rows[0])))
+
+def parse_ping(out):
+    rows = re.findall(r"(?m)^[ \t]*(\d+) packets transmitted, (\d+) (?:packets )?received", out)
+    require(len(rows) == 1, "Ethernet ping summary missing or ambiguous")
+    return tuple(map(int, rows[0]))
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--helper", type=pathlib.Path, required=True)
@@ -46,7 +56,7 @@ def main():
     ap.add_argument("--out", type=pathlib.Path, required=True)
     ap.add_argument("--profile", choices=("baseline", "instrumented"), required=True)
     ap.add_argument("--usb-only", action="store_true", help="explicit partial test without Ethernet workloads")
-    ap.add_argument("--configure-ethernet", action="store_true", help="temporarily enable bench eth0 and use DHCP if no default route")
+    ap.add_argument("--configure-ethernet", action="store_true", help="dedicated bench only: enable eth0 and DHCP if no eth0 gateway; runtime settings persist until reboot")
     a = ap.parse_args()
     ref = json.loads(a.reference.read_text())
     hashes = {x["skip_blocks"]: x["sha256"] for x in ref["samples"]}
@@ -70,8 +80,21 @@ def main():
     mounted = made = False
     tmp = "/tmp/pool-qa-" + secrets.token_hex(6)
     last = None
+    def command(cmd, seconds=30, check=True):
+        # Keep every response, even if a parser or exit-status check fails.
+        with (a.out / "uart-commands.log").open("a") as log:
+            log.write(f"\nCOMMAND {cmd}\n")
+            log.flush()
+            try:
+                out, rc = h.command(s, cmd, seconds=seconds, check=False)
+            except Exception as exc:
+                log.write(f"TRANSPORT_ERROR {exc!r}\n")
+                raise
+            log.write(out + f"\nRC {rc}\n")
+        require(not check or rc == 0, f"target command failed: rc={rc}")
+        return out, rc
     def run(cmd, seconds=30):
-        return h.command(s, cmd, seconds=seconds)[0]
+        return command(cmd, seconds)[0]
     def boot():
         out = run("cat /proc/sys/kernel/random/boot_id")
         hits = re.findall(r"(?m)^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$", out)
@@ -92,11 +115,13 @@ def main():
         result["samples"].append({"phase": label, **v})
         return v
     def counters():
-        out = run("cat /sys/class/block/sda/stat; cat /sys/class/net/eth0/statistics/rx_packets; cat /sys/class/net/eth0/statistics/tx_packets")
-        disk = [x.split() for x in out.splitlines() if re.fullmatch(r"\s*[0-9]+(?:\s+[0-9]+){10,}\s*", x)]
-        packets = [int(x) for x in out.splitlines() if x.isdecimal()]
-        require(len(disk) == 1 and len(packets) == 2, "I/O counters unavailable")
-        return {"usb_sectors_read": int(disk[0][2]), "eth_rx": packets[0], "eth_tx": packets[1]}
+        # Emit a labelled, short line rather than interpreting three
+        # unlabelled lines in an asynchronous console transcript.
+        out = run('read a b sectors rest < /sys/class/block/sda/stat && '
+                  'read rx < /sys/class/net/eth0/statistics/rx_packets && '
+                  'read tx < /sys/class/net/eth0/statistics/tx_packets && '
+                  'printf "\\nPOOL_IO %s %s %s\\n" "$sectors" "$rx" "$tx"')
+        return parse_counters(out)
     def traffic(phase, usb, net):
         before = counters()
         started = time.monotonic()
@@ -130,12 +155,10 @@ def main():
                     re.search(r"(?m)^512\+0 records out\s*$", out), "short bulk USB read")
             row["usb_bytes"] = 33554432
         if net:
-            out, rc = h.command(s, f'wait "$n"; r=$?; cat {tmp}/net; test "$r" = 0',
+            out, rc = command(f'wait "$n"; r=$?; cat {tmp}/net; test "$r" = 0',
                                 seconds=35, check=False)
             result.setdefault("ping_diagnostics", {})[phase] = {"output": out, "rc": rc}
-            hits = re.findall(r"(?m)^(\d+) packets transmitted, (\d+) (?:packets )?received", out)
-            require(len(hits) == 1, "Ethernet ping summary missing or ambiguous")
-            sent, received = map(int, hits[0])
+            sent, received = parse_ping(out)
             result["ping_diagnostics"][phase].update(sent=sent, received=received)
             require(rc == 0 and sent == 10 and received == 10,
                     "Ethernet ping criterion failed")
@@ -167,7 +190,7 @@ def main():
         require(any(" /tmp tmpfs " in x for x in lines), "RAM workspace unavailable")
         initial_boot = boot()
         if a.profile == "instrumented":
-            _, rc = h.command(s, "grep -q ' /sys/kernel/debug debugfs ' /proc/mounts", check=False)
+            _, rc = command("grep -q ' /sys/kernel/debug debugfs ' /proc/mounts", check=False)
             if rc:
                 run("mount -t debugfs -o ro debugfs /sys/kernel/debug")
                 mounted = True
@@ -243,7 +266,7 @@ def main():
         try:
             if made:
                 try:
-                    h.command(s, 'wait; rm -f ' + tmp + '/usb ' + tmp + '/net; rmdir ' + tmp,
+                    command('wait; rm -f ' + tmp + '/usb ' + tmp + '/net; rmdir ' + tmp,
                               seconds=120)
                 except Exception as exc:
                     cleanup_errors.append("RAM workspace: " + type(exc).__name__)

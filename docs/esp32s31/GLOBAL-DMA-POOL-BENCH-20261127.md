@@ -201,3 +201,33 @@ full functional PASS. UART released. Earlier baseline full PASS remains
 valid for that run. Preserve raw evidence, improve diagnostic capture
 and repeat both profiles before attributing the ping criterion failure
 to instrumentation. No further flash performed in this session.
+
+## Repeat with labelled UART diagnostics
+
+The v7 harness stores every completed command response and return code
+in a private uart-commands.log, including responses rejected by the
+parsers. Transport exceptions are logged, but a timed-out partial byte
+stream is not recovered by the existing helper. I/O counters are read
+into shell variables and emitted on a single POOL_IO line, then checked
+for uniqueness and numeric fields. Ping summary parsing tolerates
+leading horizontal whitespace but rejects missing/duplicate summaries;
+10/10 remains mandatory. Runtime-only Ethernet help now explicitly
+states that link/address settings persist until reboot.
+Eight unittest methods (including subtests for bad and ambiguous inputs)
+passed on host, normal and optimized Python.
+
+Repeated Lab v1 full test with v7: PASS, 10/10 Ethernet and 10/10
+concurrent ICMP replies, two 32 MiB reads, reference hashes matched,
+joint counter progress and overlapping jobs, no cleanup errors.
+Evidence archive baseline-full-02-evidence.tar.gz copied and verified
+on Linvora-dev. The same candidate kernel and same workload are used
+for the repeat; no new kernel build or allocation change.
+
+Astra high read-only review of Linux commit 7a542131: no change in
+allocation decisions or per-packet hook; small accounting operations
+under the pool lock and snapshot copying with IRQs disabled may affect
+timing, and the snapshot allocates ordinary kernel memory. These are
+hypotheses, not evidence that the earlier failed ping criterion was
+caused by instrumentation. If failure persists, compare baseline,
+candidate without debugfs reads, and candidate with sparse timestamped
+reads, using identical traffic and multiple repetitions.
