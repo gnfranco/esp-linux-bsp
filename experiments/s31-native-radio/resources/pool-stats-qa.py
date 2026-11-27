@@ -45,6 +45,7 @@ def main():
     ap.add_argument("--reference", type=pathlib.Path, required=True)
     ap.add_argument("--out", type=pathlib.Path, required=True)
     ap.add_argument("--profile", choices=("baseline", "instrumented"), required=True)
+    ap.add_argument("--usb-only", action="store_true", help="explicit partial test without Ethernet workloads")
     a = ap.parse_args()
     ref = json.loads(a.reference.read_text())
     hashes = {x["skip_blocks"]: x["sha256"] for x in ref["samples"]}
@@ -62,7 +63,7 @@ def main():
                       write_timeout=5, exclusive=True)
     s.port = "/dev/ttyUSB0"
     s.dtr = s.rts = False
-    result = {"profile": a.profile, "status": "INCOMPLETE", "samples": [], "phases": {}}
+    result = {"profile": a.profile, "scope": "usb-only" if a.usb_only else "full", "status": "INCOMPLETE", "samples": [], "phases": {}}
     body_ok = False
     cleanup_errors = []
     mounted = made = False
@@ -158,6 +159,13 @@ def main():
         require(not any(re.match(r"^/dev/sd[a-z]", x) for x in lines), "USB is mounted")
         require(any(" /tmp tmpfs " in x for x in lines), "RAM workspace unavailable")
         initial_boot = boot()
+        if a.profile == "instrumented":
+            _, rc = h.command(s, "grep -q ' /sys/kernel/debug debugfs ' /proc/mounts", check=False)
+            if rc:
+                run("mount -t debugfs -o ro debugfs /sys/kernel/debug")
+                mounted = True
+            run("test -r " + STATS)
+        snap("boot-console")
         # UART open may reset the board; shell availability precedes
         # asynchronous SCSI enumeration and local network configuration.
         deadline = time.monotonic() + 60
@@ -168,29 +176,23 @@ def main():
             usb_ready = {"Kingston", "DataTraveler 3.0", "480"}.issubset({x.strip() for x in out.splitlines()})
             route = run("ip -4 route show default")
             match = re.search(r"(?m)^default via ([0-9.]+) dev eth0\b", route)
-            if usb_ready and match:
+            if usb_ready and (match or a.usb_only):
                 break
             time.sleep(2)
         result["usb_ready"] = usb_ready
         result["local_gateway_ready"] = bool(match)
         require(usb_ready, "known USB medium or high-speed link missing after readiness wait")
-        require(match, "no local Ethernet gateway after readiness wait")
+        require(match or a.usb_only, "no local Ethernet gateway after readiness wait")
         out = run("cat /sys/class/block/sda/size")
         sectors = [int(x) for x in out.splitlines() if x.isdecimal()]
         require(len(sectors) == 1 and sectors[0] >= 131072, "USB too small for bounded read")
-        gateway = str(ipaddress.IPv4Address(match.group(1)))
+        gateway = str(ipaddress.IPv4Address(match.group(1))) if match else None
         mounts = run("cat /proc/mounts")
         require(not any(re.match(r"^/dev/sd[a-z]", x) for x in mounts.splitlines()),
                 "USB is mounted after readiness wait")
         require(boot() == initial_boot, "unexpected reboot during readiness wait")
         run("umask 077; mkdir " + tmp)
         made = True
-        if a.profile == "instrumented":
-            _, rc = h.command(s, "grep -q ' /sys/kernel/debug debugfs ' /proc/mounts", check=False)
-            if rc:
-                run("mount -t debugfs -o ro debugfs /sys/kernel/debug")
-                mounted = True
-            run("test -r " + STATS)
         snap("idle")
         for skip in SKIPS:
             out = run(f"dd if=/dev/sda bs=4096 skip={skip} count=32 | sha256sum")
@@ -198,9 +200,11 @@ def main():
                     re.search(r"(?m)^32\+0 records in\s*$", out) and
                     re.search(r"(?m)^32\+0 records out\s*$", out), "USB reference mismatch")
         result["usb_reference_bytes"] = 1048576
-        traffic("ethernet", False, True)
+        if not a.usb_only:
+            traffic("ethernet", False, True)
         traffic("usb", True, False)
-        traffic("concurrent", True, True)
+        if not a.usb_only:
+            traffic("concurrent", True, True)
         snap("final")
         errors = run("dmesg", seconds=45)
         require(not re.search(r"Oops \[|Kernel panic|list_(add|del) corruption|Unable to handle kernel|DMA-API:|swiotlb buffer is full|I/O error, dev sd", errors, re.I),
@@ -228,10 +232,10 @@ def main():
             s.close()
             result["cleanup_errors"] = cleanup_errors
             if body_ok and not cleanup_errors:
-                result["status"] = "PASS"
+                result["status"] = "USB_ONLY_PASS" if a.usb_only else "PASS"
             (a.out / "result.json").write_text(json.dumps(result, indent=2) + "\n")
     require(not cleanup_errors, "cleanup failed")
-    print("S31_GLOBAL_POOL_QA_PASS", a.profile, flush=True)
+    print("S31_GLOBAL_POOL_USB_ONLY_PASS" if a.usb_only else "S31_GLOBAL_POOL_QA_PASS", a.profile, flush=True)
 
 if __name__ == "__main__":
     main()

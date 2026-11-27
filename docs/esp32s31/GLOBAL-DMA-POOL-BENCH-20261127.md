@@ -82,3 +82,64 @@ global-dma-pool-stats-20261127/bench-evidence with verified transfer hashes.
 At 13:03 UTC the full build was still active (402 log lines), with 5.1 GiB
 free. The original flash image remains unchanged; no DMA capacity claim
 or instrumented runtime result has been established.
+
+## Full build and physical USB qualification
+
+Full kernel build completed with status 0. Kernel commit unchanged
+7a542131c806aaae330579a9955ff728506e15b1; config difference still only
+DMA_GLOBAL_POOL_STATS=y. xipImage 4294412 bytes, SHA-256
+13f0d4f93b52e7fd9e0a1dd737c951d6472ff320dcfee36eb757d0e4a6de3024.
+The four full-build checksums verified and System.map contains
+dma_global_pool_stats_show/init/fops. Transferred the kernel only through
+a draft in the private esp-linux-lab repository, tag label
+transport-s31-global-dma-stats-20261127 (not a release); both computers
+verified SHA-256.
+
+Fourth baseline attempt confirmed USB readiness, but no eth0 default
+gateway appeared within the readiness window. Added explicit --usb-only
+scope, which never reports a full qualification PASS; candidate stats
+are also sampled at console availability before peripheral readiness.
+Parser tests pass. No network reconfiguration attempted.
+
+Physical results on original Lab v1 DTB:
+- Baseline USB-only PASS: eight reference hashes (1 MiB), 32 MiB bulk
+  read, 66240 additional block sectors, host elapsed 7.269 s.
+- Candidate USB-only PASS: same hashes, same bulk bytes and sector
+  count, host elapsed 7.909 s. Ten coherent pool snapshots all agreed:
+  4096 bytes/page, 64 pages total, 3 used/tracked, 61 free, peak 3,
+  largest allocatable 32 pages, 0 allocation failures and 0 delta.
+  Thus 12 KiB used, 244 KiB free, 128 KiB largest aligned extent.
+  Both cores remained online and no tested kernel error was observed.
+- No Ethernet workload or concurrent workload: gateway absent; Ethernet
+  counters unchanged. USB-only timings include serial/control overhead,
+  not a precise throughput regression measurement. No radio allocation
+  or resource reservation was made.
+- Before flash all five slots verified; candidate kernel slot verified;
+  original kernel restored and all five slots verified again. Restored
+  baseline USB-only PASS (7.212 s); UART free. No DTB/rootfs/USB write.
+
+Logs and JSON copied from Orion to Linvora-dev, transfer hashes checked,
+under global-dma-pool-stats-20261127/bench-evidence. Candidate and restored
+tests both completed, not an in-progress flash procedure.
+
+## OpenSBI footprint: source-derived reconstruction
+
+Recovered exact fw_dynamic.bin and associated ELF on Orion in
+s31-reboot-validation/opensbi-rom/platform/generic/firmware. Reconstructed
+the file-backed PT_LOAD image from the ELF and matched the FIT payload
+byte for byte. Payload SHA-256:
+0e179f805a5272b5d3d3bbdb1fb81a79a564a5fc4b3dcb4a4f17715c8b5009fa.
+ELF SHA-256:
+467d8e22b81a71656a3f4a4617f768406a8eadb6e2f4cc6fd35739bc22820ba8.
+Symbols: _fw_start=0x2f000000, _fw_rw_start=0x2f020000,
+_bss_end=0x2f023b90, _fw_end=0x2f024000. The FIT fdt-1 extracted at
+data-offset 0x3e62c contains two enabled CPUs and opensbi,config
+heap-size=0x7000. Pinned OpenSBI commit 0940d8a5834d02b93e2be0e60ef6505767862875
+platform/generic/platform.c uses that heap override; fw_base.S adds
+two 8192-byte stacks (including scratch) then the heap after _fw_end.
+Derived firmware end is 0x2f02f000 (188 KiB from base). The domain
+region builder rounds the RW interval 0xf000 to a naturally aligned
+0x10000 region ending at 0x2f030000, which is exactly the pool start.
+This is source/artifact-derived, not live scratch/PMP register measurement.
+Do not consider the geometric 4 KiB gap allocatable. Further runtime
+ownership confirmation remains required; no modifications to OpenSBI.
