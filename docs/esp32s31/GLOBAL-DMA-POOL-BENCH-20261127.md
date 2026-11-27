@@ -143,3 +143,24 @@ region builder rounds the RW interval 0xf000 to a naturally aligned
 This is source/artifact-derived, not live scratch/PMP register measurement.
 Do not consider the geometric 4 KiB gap allocatable. Further runtime
 ownership confirmation remains required; no modifications to OpenSBI.
+
+## Ethernet readiness resolved on Lab v1
+
+The original rootfs /etc/network/interfaces contains only auto lo /
+iface lo inet loopback. S40network runs ifup -a, so eth0 was initially
+administratively DOWN, with no DHCP process. This explains the missing
+gateway on previous attempts, not evidence of a bad cable or PHY.
+Using the authorized local bench, ip link set dev eth0 up yielded
+carrier=1, speed=1000, duplex=full. udhcpc -i eth0 -n -q -t 5 -T 3
+obtained a lease; 5/5 ICMP echoes to the local gateway succeeded.
+Private evidence ethernet-preflight-01.log and ethernet-activate-01.log
+transferred and hash-verified on Linvora-dev.
+
+Harness now accepts an explicit --configure-ethernet option in full
+scope. It raises the interface and requests a lease only if an eth0
+default route is absent. Changes are runtime-only; no rootfs modification.
+Candidate records pool snapshots before activation, at carrier and
+after DHCP. USB-only scope is unaffected. The parser tests pass.
+This establishes local Ethernet connectivity on the uninstrumented
+Lab v1; full combined workload and instrumented Ethernet qualification
+are separate tests.

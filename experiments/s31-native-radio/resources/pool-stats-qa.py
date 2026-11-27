@@ -46,6 +46,7 @@ def main():
     ap.add_argument("--out", type=pathlib.Path, required=True)
     ap.add_argument("--profile", choices=("baseline", "instrumented"), required=True)
     ap.add_argument("--usb-only", action="store_true", help="explicit partial test without Ethernet workloads")
+    ap.add_argument("--configure-ethernet", action="store_true", help="temporarily enable bench eth0 and use DHCP if no default route")
     a = ap.parse_args()
     ref = json.loads(a.reference.read_text())
     hashes = {x["skip_blocks"]: x["sha256"] for x in ref["samples"]}
@@ -166,6 +167,23 @@ def main():
                 mounted = True
             run("test -r " + STATS)
         snap("boot-console")
+        if a.configure_ethernet and not a.usb_only:
+            route = run("ip -4 route show default")
+            if not re.search(r"(?m)^default via ([0-9.]+) dev eth0\b", route):
+                run("ip link set dev eth0 up")
+                for attempt in range(10):
+                    out = run("printf '\\n'; cat /sys/class/net/eth0/carrier")
+                    if "1" in out.splitlines():
+                        break
+                    time.sleep(2)
+                else:
+                    raise RuntimeError("no Ethernet carrier after activation")
+                snap("ethernet-link-up")
+                run("udhcpc -i eth0 -n -q -t 5 -T 3", seconds=30)
+                result["dhcp_configured_by_test"] = True
+                snap("ethernet-dhcp")
+            else:
+                result["dhcp_configured_by_test"] = False
         # UART open may reset the board; shell availability precedes
         # asynchronous SCSI enumeration and local network configuration.
         deadline = time.monotonic() + 60
