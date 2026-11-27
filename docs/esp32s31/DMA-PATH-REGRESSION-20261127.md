@@ -229,3 +229,28 @@ loopback on the alternate DTB are incomplete in this regression;
 repeat with an authorized connected link and confirmed disconnected
 CAN matrix pads. External ISO 11898-2 and the independent DMA32
 and firmware cache questions remain outside this patch's claims.
+
+## Ethernet cable-connected regression
+
+On 2026-11-27 the operator connected Ethernet. The original
+S31 Lab v1 and the exact non-instrumented candidate 047a032d
+both brought eth0 up, obtained IPv4 through the local bench
+network, and completed 10/10 ICMP echo exchanges, 1,000-byte
+payload, to the configured local gateway. No addresses or
+credentials recorded here. This is a functional Ethernet
+regression, not a throughput or extended load qualification.
+The earlier no-carrier situation was due to bench connectivity,
+not a demonstrated defect in either kernel.
+
+Only the XIP kernel was changed; the original DTB was retained.
+Following the candidate test, all five original flash-component
+digests matched and the original boot profile passed, UART free.
+Private Orion evidence:
+source/build/s31-dma-regression-20261127/ethernet-connected/
+ethernet-connected-evidence.tar.gz, 9,137 bytes, SHA-256
+f11d4b8021f34dd7a7f427893c8093d264a6ab1800030c01205fe0f8be53e793.
+
+Physical CAN controller loopback remains outside this follow-up
+regression unless the matrix pads GPIO35/GPIO36 are confirmed
+unconnected. Previous controller and external-bus limitations
+remain as documented; virtual SocketCAN is not SSP validation.
