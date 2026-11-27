@@ -11,10 +11,12 @@
  * GENERAL must not be backed by that same physical pool.
  * A reservation is charged before a backend allocation; release only
  * after the backend has relinquished the storage. No cross-class fallback.
+ * Init limits must not alias ledger storage. Reservation output must
+ * be valid writable storage disjoint from the ledger.
  * Never reinitialize while any reservation token might still be used.
  */
 enum radio_class { RADIO_GENERAL, RADIO_INTERNAL, RADIO_INTERNAL_DMA, RADIO_CLASS_COUNT };
-enum radio_result { RADIO_OK, RADIO_INVALID, RADIO_LIMIT, RADIO_SLOTS, RADIO_STALE, RADIO_EXHAUSTED };
+enum radio_result { RADIO_OK, RADIO_INVALID, RADIO_LIMIT, RADIO_SLOTS, RADIO_STALE, RADIO_EXHAUSTED, RADIO_BACKEND };
 #define RADIO_LEDGER_SLOTS 64
 struct radio_usage {
     size_t limit, requested, charged, peak;

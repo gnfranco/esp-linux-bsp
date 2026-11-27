@@ -24,6 +24,9 @@ enum radio_result radio_reserve(struct radio_ledger *l, enum radio_class kind,
     if (!l || !token || (unsigned)kind >= RADIO_CLASS_COUNT ||
         !requested || charged < requested)
         return RADIO_INVALID;
+    uintptr_t base = (uintptr_t)l, dest = (uintptr_t)token;
+    if (dest >= base ? dest - base < sizeof(*l) : base - dest < sizeof(*token))
+        return RADIO_INVALID;
     struct radio_usage *u = &l->usage[kind];
     if (charged > u->limit - u->charged)
         return reject(u, RADIO_LIMIT);
