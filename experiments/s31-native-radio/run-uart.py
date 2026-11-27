@@ -60,7 +60,7 @@ def main():
     ap.add_argument("--port", required=True)
     ap.add_argument("--artifact", required=True, type=pathlib.Path)
     ap.add_argument("--sha256", required=True)
-    ap.add_argument("--probe", choices=("metadata", "coex-register", "osi-sem", "osi-timer"), default="metadata")
+    ap.add_argument("--probe", choices=("metadata", "coex-register", "osi-sem", "osi-timer", "osi-timer-binding"), default="metadata")
     a = ap.parse_args()
     payload = a.artifact.read_bytes()
     if len(payload) > 65536 or hashlib.sha256(payload).hexdigest() != a.sha256:
@@ -101,7 +101,7 @@ def main():
         if not any(line.startswith(a.sha256 + " ") for line in out.splitlines()):
             raise RuntimeError("target artifact digest mismatch")
         print("TARGET_SHA256_PASS", a.sha256, flush=True)
-        out, _ = command(s, f"{temp}/probe", seconds=40 if a.probe in ("osi-sem", "osi-timer") else 20)
+        out, _ = command(s, f"{temp}/probe", seconds=40 if a.probe in ("osi-sem", "osi-timer", "osi-timer-binding") else 20)
         print(out.strip(), flush=True)
         lines = out.splitlines()
         expected = {
@@ -122,6 +122,8 @@ def main():
                           "TIMER_PERIODIC_FIXED_DELAY_PASS",
                           "TIMER_IN_FLIGHT_REARM_PASS", "TIMER_CLOSE_DRAIN_PASS",
                           "S31_OSI_TIMER_PASS"},
+            "osi-timer-binding": {"BINDING_LIFETIME_PASS", "BINDING_CLOSE_PASS",
+                                  "BINDING_DISARM_PASS", "BINDING_REENTRY_PASS", "S31_OSI_TIMER_BINDING_PASS"},
         }[a.probe]
         if not expected.issubset(lines):
             raise RuntimeError("probe markers not confirmed")
@@ -136,6 +138,7 @@ def main():
             "coex-register": "S31_COEX_REGISTER_HARDWARE_PASS",
             "osi-sem": "S31_OSI_SEM_HARDWARE_PASS",
             "osi-timer": "S31_OSI_TIMER_HARDWARE_PASS",
+            "osi-timer-binding": "S31_OSI_TIMER_BINDING_HARDWARE_PASS",
         }[a.probe], flush=True)
     finally:
         try:
