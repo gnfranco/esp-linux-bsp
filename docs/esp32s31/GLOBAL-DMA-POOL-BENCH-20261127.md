@@ -74,3 +74,11 @@ SDA_ABSENT observation; no local eth0 default route at that sample.
 The readiness wait was added to avoid attributing an asynchronous boot
 condition to the instrumented kernel. Neither attempted workload ran.
 No candidate flash was written.
+
+Third attempt with readiness wait: console unavailable before readiness
+checks. Result INCOMPLETE, no workload samples, UART released. The three
+attempts and USB preflight logs have been preserved on Linvora-dev under
+global-dma-pool-stats-20261127/bench-evidence with verified transfer hashes.
+At 13:03 UTC the full build was still active (402 log lines), with 5.1 GiB
+free. The original flash image remains unchanged; no DMA capacity claim
+or instrumented runtime result has been established.
