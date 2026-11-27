@@ -83,3 +83,45 @@ python3 experiments/s31-native-radio/wifi-rom-addresses.py \
 S31_WIFI_ROM_ADDRESS_AUDIT_PASS; private result
 rom-address-audit.json.log SHA-256
 03485538a4bc4210c3fa36b38ab715f5524f78955ab55968b3f9be4cfc44185d.
+
+## Physical test: functional PASS, overall session INCOMPLETE
+
+Original five Lab v1 slots and full 4300800-byte rollback span
+verified immediately before writing the previously qualified kernel.
+Candidate digest matched independently. Exact test ELF digest
+confirmed on target tmpfs. All three groups passed:
+SRAM_OSI_CLASSES_REALLOC_PASS,
+SRAM_OSI_EXHAUSTION_FRAGMENTATION_PASS,
+SRAM_OSI_THREADS_CLEANUP_PASS, and S31_SRAM_OSI_DEVICE_PASS, rc=0.
+Pool before: 2 used/62 free pages; after: 6 used/58 free pages,
+tracked counts matched, peak 6 pages, zero pool allocation failures.
+Exactly four pages quarantined as intended; boot ID unchanged,
+both harts online, eth0 present, target executable removed.
+
+However, at 23.407735 seconds after boot (during transfer, before
+the allocator executable was run), rcu_sched reported a CPU0 stall
+in kworker/0:2, workqueue events. EPC 0xc010d2ae resolves against the
+exact candidate vmlinux to kernfs_notify_workfn+0xb4, in the loop
+traversing kernfs superblocks. The second stall was logged at
+86.419623 seconds during debugfs unmount. The serial command timed
+out, so final unmount and candidate reboot test were not confirmed.
+The harness's original fault filter did not classify RCU stalls;
+tighten it before the next test. No causal link to the allocator
+established; no proof of root cause. Do not waive this anomaly.
+No SRAM_OSI_HARDWARE_PASS or SRAM_OSI_REBOOT_PASS overall markers.
+Session candidate_rc=1. Functional callback results are retained,
+but this is not full platform qualification. Next isolate kernfs/RCU
+with a candidate boot and no test workload, compare restored baseline
+under the same peripheral and UART conditions. No production driver
+or vendor initialization until the reliability gate is addressed.
+
+Final rollback: exact original erase span verified, all five
+original slot digests verified, Lab v1 boot and both harts confirmed,
+eth0 present and candidate marker absent, UART free.
+Evidence in private Linvora-dev cache:
+~/deps/s31-research/wifi-first-20261127/physical-evidence/
+osi-sram-candidate-evidence.tar.gz SHA-256
+f1ad2293a7028bea93fbebeb399cdca0c099f215af6c3cbf351ba6c4134287f7
+osi-sram-restored-evidence.tar.gz SHA-256
+5c7f6ff15a1a257b3b8d440a0b18b91d6337f9bb426eb22f34cb5d339d15ab36
+Both hashes and all previous evidence archive hashes verified.
