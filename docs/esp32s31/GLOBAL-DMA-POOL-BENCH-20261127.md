@@ -266,3 +266,30 @@ possible location to distinguish from serial loss or block-stat access,
 not a diagnosed deadlock. Compare repeated baseline, unread control,
 and sampled candidate before claiming concurrent qualification or
 assigning a radio allocation budget. Keep original image as reference.
+
+## V8 baseline and independent driver inspection
+
+First v8 baseline attempt stopped at the shell readiness gate; no
+workload. One flash-id recovery reset (no flash write) restored the
+console. Second attempt: full PASS, 20/20 total ICMP replies, two 32 MiB
+USB reads, all eight reference digests, joint counter progress and
+overlapping jobs, both harts online, cleanup completed. The archive
+baseline-v8-evidence.tar.gz is private on Linvora-dev, SHA-256
+29361c586144a422b394c0f873f68fbaf915fbd02128478bb4b9d3f3e40e62a9.
+V8 code digest 80ba9666c3cb133a338809ce2eff747a610b2f6141f4fbe99332f4cd82cf74e8.
+
+Astra high read-only inspection of stmmac_main.c and u64_stats_sync.h:
+all inspected queue seqcounts initialized, matching update begin/end
+pairs, and preemption disabling in RV32 u64_stats updates. No concrete
+unmatched writer or preemption defect found in this limited inspection.
+Writer mutual exclusion across CPUs and IRQ-context correctness
+remain broader questions, not established by matching pairs.
+If a future counter read stalls, use partial stage markers and an
+independent liveness check; stack/PC and seqcount evidence would be
+needed to attribute a deadlock. No driver change.
+
+Control protocol: exact previously verified candidate kernel, first
+--stats-unread, then a separate boot via flash-id and sampled profile
+if the control passes. Verify original flash before write, verify
+candidate, restore and verify all five original slots on exit.
+No modification to the pool capacity or radio allocation policy.
