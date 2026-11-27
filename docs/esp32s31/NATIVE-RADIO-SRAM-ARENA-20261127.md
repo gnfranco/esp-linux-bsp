@@ -68,3 +68,49 @@ with explicit device identity, allocation lifecycle, bounded
 mapping interface and DMA quiescence. It must not be wired to the
 radio OSI callbacks until ownership, backing and access attributes
 have been established. No claim of completed physical backend.
+
+## Physical qualification result
+
+Full kernel build completed with status 0. Kernel image 4298508 bytes,
+SHA-256 b938c056b4b8d699c9c64db4d893f17888091e61da0da79ddc118635ed956211.
+The compiled DTB matches the previous statistics build; the original
+Lab v1 DTB remained on the board. The experimental kernel was transferred
+through a private draft release in gnfranco/esp-linux-lab.
+
+Before flashing, all five original image digests matched. Because the
+candidate is 4096 bytes larger than the original kernel, backed up the
+entire affected erase-aligned flash span (4300800 bytes from 0x500000)
+from the physical board. Original kernel prefix matched the Lab v1 file.
+Backup SHA-256 8a0ef4de94b59d407cfbf668ae4625d2be9ec0d6372dcab4906e9a5ebecc0e3b.
+Candidate kernel alone written and independently verified.
+
+Physical result: ARENA_HARDWARE_PASS. Kernel emitted exactly
+s31-dma-arena: PASS bytes=16384 floor_pages=48.
+All suballocation, alignment, pattern, zeroing, oversize denial
+and release checks passed. Post-proof pool snapshot:
+page_bytes=4096, total_pages=64, used_pages=3, free_pages=61,
+tracked_pages=3, peak_pages=4, largest_allocatable_pages=32,
+allocation_failures=0. Both harts online, Ethernet interface present,
+CramFS root read-only, no screened kernel fault, debugfs unmounted.
+No radio startup, no bus-master DMA experiment, no userspace mapping.
+This is a temporary kernel CPU-access SRAM ownership proof, not a
+persistent radio backend. No full traffic regression was performed.
+
+Rollback restored and verified the entire backed-up span, then all
+five original slots. Restored Lab v1 boot and both harts confirmed,
+eth0 present, candidate marker absent. RESTORED_RUNTIME_PASS and
+UART_FREE; no residual experimental kernel in the flash slot.
+
+Private evidence on Linvora-dev:
+~/deps/s31-research/s31-dma-arena-proof-20261127/physical-evidence/
+candidate-evidence.tar.gz SHA-256
+8c882c888da7145e96b7fcde03982bc05de480c6a51ac2d37d663c87813274fe
+restored-evidence.tar.gz SHA-256
+d05223ebfd3b23d7e889edc94cab3a1b3c59a2c6bc27ae9ba7e31f1280637e76
+Both archives independently hash checked. Exact flash backup remains
+on Orion, alongside the session script and raw logs.
+
+Next gate: design a persistent arena with explicit Linux device
+identity and safe lifetime/access semantics, then establish actual
+radio DMA reachability before connecting the allocation callbacks.
+Retain the headroom policy as experimental, not a guaranteed budget.
