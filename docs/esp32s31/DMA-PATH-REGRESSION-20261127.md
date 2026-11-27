@@ -283,3 +283,88 @@ s31-dma-diag-pair-20261127 in deps/s31-research, respectively.
 Intermediate object caches are reproducible and not required to
 preserve these validated artifacts. Source branches are independently
 synced to the forks; no diagnostic code in the upstream RFC.
+
+## Physical CAN-controller DMA regression (matched A/B)
+
+On 2026-11-27, the operator confirmed GPIO35 and GPIO36 were
+physically unconnected, with the Ethernet cable and deliberately
+attached USB storage connected. The default board DTB disables both
+physical CAN controllers. For this bench-only test, the release
+`board-can-selftest.dtb` was selected; only the two CAN controller
+status and same-pad pinctrl assignments differ from the default
+DTB. Alternate DTB SHA-256:
+`87c8fe870ac985f707aed9974f649d3486ceae12ae987bc597d84a8ce0126106`.
+
+- A: S31 Lab v1 source `9b41c9c5df88ed883b05662187e431bb3452e491`,
+  XIP SHA-256 `5fe191d8e189a229f68848791bdb22b851b1b1922ca3f4b0a150030ba0f406ed`.
+- B: direct child `047a032ddaeb1b6c8354b6fa5aeb0ffe48db0b89`,
+  XIP SHA-256 `a4ba9b2a004da5c407f0eba5cdbddf6bc4eafc250b91179329099538f7091338`.
+  The source difference is the 13-line DMA-alignment patch alone.
+- Both boots verified RV32 Linux 6.18, CPUs 0–1 online, original
+  read-only CramFS, same command line (including `swiotlb=128`),
+  expected alignment boot message absent/present respectively,
+  `can0` at 20394000 and `can1` at 20395000, USB enumeration at
+  480 Mbit/s, and eth0 present. Each DTB/XIP pair was flash-verified.
+
+The pinned [peripheral QA sources](../../examples/esp32s31/peripheral-qa/README.md)
+were used in tmpfs, with SHA-256 checked on host and target;
+transmitting sockets disable local SocketCAN echo in hardware modes.
+Each controller was reconfigured separately for every scenario,
+nominal bitrate 250 kbit/s, then placed down after the case. Standard
+and extended frame IDs, data and BRS flags were verified.
+
+| Scenario (per controller) | A can0 | A can1 | B can0 | B can1 |
+| --- | ---: | ---: | ---: | ---: |
+| FD, no BRS, 64-byte payload | 128/128 | 128/128 | 128/128 | 128/128 |
+| FD BRS, data 250 kbit/s | 128/128 | 128/128 | 128/128 | 128/128 |
+| FD BRS, data 500 kbit/s | 128/128 | 128/128 | 128/128 | 128/128 |
+| FD BRS, data 1 Mbit/s | 128/128 | 128/128 | 128/128 | 128/128 |
+| FD BRS, data 2 Mbit/s | 128/128 | 128/128 | 128/128 | 128/128 |
+| Mixed classical/FD, data 1 Mbit/s | 256/256 | 256/256 | 256/256 | 256/256 |
+
+Each profile passed 12 cases: 1,536 FD plus 256 classical frames.
+All 3,584 matched across both profiles; each case had exact
+TX packet delta, at least the expected RX packet delta (state
+notifications can contribute), zero RX/TX errors and drops both
+before/after and in the deltas. Selected kernel error-signature
+checks passed. This is a short isolated controller-loopback
+regression, not a physical transceiver, bus termination, arbitration,
+external ACK, throughput or ISO 11898-2 qualification.
+
+Both profiles passed 384 ES8311 identification transactions and
+all eight 128 KiB read-only USB samples matched each other and the
+earlier private reference. No mount or write to USB. B also passed
+Ethernet link/IP and 10/10 local gateway ICMP echoes, 1,000-byte
+payload, with the alternate DTB. The separate A Ethernet helper
+timed out reopening the UART console before testing the link;
+no A alternate-DTB Ethernet traffic result is claimed. Both A
+and B had already passed Ethernet on the default DTB, as above.
+Do not attribute that helper timeout to Ethernet, CAN or DMA.
+
+Both sources already include the combined CAN SSP series, so this
+A/B isolates the DMA source change, not the SSP hypothesis.
+This extends combined-tree evidence for the DMA and SSP RFCs;
+neither independent RFC kernel was flashed in this test.
+
+Exact private test harness SHA-256:
+`deed955afe2870e809837885bcb8a7b0e61f330438499790202382af03018a84`
+(`run-matrix.py`);
+`b2895ebfaef242a675c2206fd9141216962154d6ab1bcf02141343f3e73c9ffc`
+(`run-physical.sh`).
+
+Rollback: the original sector-rounded DTB (12,288 bytes) and
+kernel spans were rewritten from the release image and both digests
+verified, then all five original release components were independently
+verified. The original DMA/USB boot profile passed and UART was free.
+The wrapper's nonzero exit reflected the A Ethernet helper timeout,
+not a rollback or CAN failure.
+
+Private evidence archive (including the exact harnesses, result JSON,
+UART transcripts and flash verification logs) preserved on both Orion
+and Linvora-dev at the respective lab research paths:
+`s31-dma-physical-can-20261127/can-regression-evidence.tar.gz`.
+22,117 bytes, SHA-256
+`7f7afa368c3144cb2928275e6572d986bf852ad2e90c31c3d5d2ab0036f77c51`.
+Transfer digest verified on Linvora-dev. Raw logs, media sample
+hashes, local addresses, credentials and flash contents are not
+published.
