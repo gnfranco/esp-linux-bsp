@@ -84,7 +84,7 @@ Use the already installed ESP toolchain, without recreating kernels:
 CC="$HOME/toolchains/s31-linux-kernel-gcc-14.1.1/bin/riscv64-esp-linux-musl-gcc"
 experiments/s31-native-radio/osi/build-osi-timer.sh "$CC" /tmp/s31-timer-build
 /tmp/s31-timer-build/test-host
-ASAN_OPTIONS=detect_leaks=1:abort_on_error=1 \\
+ASAN_OPTIONS=detect_leaks=1:abort_on_error=1 \
   UBSAN_OPTIONS=halt_on_error=1 /tmp/s31-timer-build/test-host-asan
 ```
 
