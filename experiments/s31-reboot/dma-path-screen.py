@@ -79,6 +79,8 @@ def main():
     ap.add_argument("--port", default="/dev/ttyUSB0")
     ap.add_argument("--expect-alignment", choices=("baseline", "retained"),
                     required=True)
+    ap.add_argument("--observe-enumeration-failure", action="store_true",
+                    help="collect boot counters even if expected USB did not enumerate")
     args = ap.parse_args()
     args.out.mkdir(mode=0o700)
     spec = importlib.util.spec_from_file_location("helper", args.helper)
@@ -101,16 +103,13 @@ def main():
             return h.command(s, command, seconds=seconds)[0]
 
         info = run("uname -m; cat /sys/devices/system/cpu/online; "
-                   "cat /proc/mounts; cat /sys/class/block/sda/device/vendor; "
-                   "cat /sys/class/block/sda/device/model; "
+                   "cat /proc/mounts; "
                    "dmesg | grep 'retaining 64-byte DMA cache alignment' || true")
         lines = info.splitlines()
         if ("riscv32" not in lines or "0-1" not in lines or
                 " / cramfs ro" not in info or
-                not any(x.strip() == "Kingston" for x in lines) or
-                not any(x.strip() == "DataTraveler 3.0" for x in lines) or
-                any(x.startswith("/dev/sda") for x in lines)):
-            raise RuntimeError("unexpected S31 profile or USB medium")
+                any(re.match(r"^/dev/sd[a-z]", x) for x in lines)):
+            raise RuntimeError("unexpected S31 profile or USB mount")
         retained = any(re.match(r"^\s*\[\s*\d+\.\d+\]", x) and
                        "retaining 64-byte DMA cache alignment" in x for x in lines)
         if retained != (args.expect_alignment == "retained"):
@@ -153,19 +152,45 @@ def main():
         idle = snap("idle")
         results["idle_delta"] = summarize(delta(boot, idle))
 
-        for skip in (0, 32, 128, 256, 512, 1024, 2048, 4096):
-            out = run(f"dd if=/dev/sda bs=4096 skip={skip} count=32 | sha256sum")
-            hits = re.findall(r"(?m)^([0-9a-f]{64})\s+-\s*$", out)
-            if (len(hits) != 1 or
-                    not re.search(r"(?m)^32\+0 records in\s*$", out) or
-                    not re.search(r"(?m)^32\+0 records out\s*$", out)):
-                raise RuntimeError("short USB read")
-            results["usb_sha256"].append({"skip": skip, "sha256": hits[0]})
-        usb = snap("usb")
-        results["usb_delta"] = summarize(delta(idle, usb))
-        results["bytes_read"] = 1048576
-        if not any(row["device"] == "usb" for row in results["usb_delta"]):
-            raise RuntimeError("no USB DMA activity observed during read phase")
+        # Only the known medium may be read. If there is no block device,
+        # capture boot/idle counters without treating enumeration as passing.
+        usb_info = run("if test -b /dev/sda; then "
+                       "cat /sys/class/block/sda/device/vendor; "
+                       "cat /sys/class/block/sda/device/model; "
+                       "else echo NO_USB_BLOCK_DEVICE; fi")
+        usb_lines = usb_info.splitlines()
+        enumerated = (any(x.strip() == "Kingston" for x in usb_lines) and
+                      any(x.strip() == "DataTraveler 3.0" for x in usb_lines))
+        if not enumerated and (not args.observe_enumeration_failure or
+                               "NO_USB_BLOCK_DEVICE" not in usb_lines):
+            raise RuntimeError("expected medium not confirmed")
+        results["usb_enumerated"] = enumerated
+        if not enumerated:
+            msgs = run("dmesg | grep -E 'usb 1-1:|dwc2.*error' || true")
+            results["usb_error_messages"] = [x for x in msgs.splitlines()
+                                              if re.match(r"^\[\s*\d+\.\d+\]", x)]
+            results["usb_delta"] = []
+            results["bytes_read"] = 0
+            usb = idle
+            results["usb_status"] = "ENUMERATION_FAILED"
+        else:
+
+            for skip in (0, 32, 128, 256, 512, 1024, 2048, 4096):
+                out = run(f"dd if=/dev/sda bs=4096 skip={skip} count=32 | sha256sum")
+                hits = re.findall(r"(?m)^([0-9a-f]{64})\s+-\s*$", out)
+                if (len(hits) != 1 or
+                        not re.search(r"(?m)^32\+0 records in\s*$", out) or
+                        not re.search(r"(?m)^32\+0 records out\s*$", out)):
+                    raise RuntimeError("short USB read")
+                results["usb_sha256"].append({"skip": skip, "sha256": hits[0]})
+            usb = snap("usb")
+            results["usb_delta"] = summarize(delta(idle, usb))
+            results["bytes_read"] = 1048576
+            if not any(row["device"] == "usb" for row in results["usb_delta"]):
+                raise RuntimeError("no USB DMA activity observed during read phase")
+
+        if enumerated:
+            results["usb_status"] = "READ_PASS"
 
         # Network work is limited to the configured, local bench gateway.
         route = run("ip -4 route show default")
@@ -180,6 +205,7 @@ def main():
             results["ethernet"] = "no_default_gateway"
         (args.out / "result.json").write_text(json.dumps(results, indent=2) + "\n")
         print("DMA_PATH_SNAPSHOT_PASS", args.expect_alignment, flush=True)
+        print("USB_STATUS", results["usb_status"], flush=True)
         print("USB_READ_BYTES", results["bytes_read"], flush=True)
         print("ETHERNET", results["ethernet"], flush=True)
     finally:
