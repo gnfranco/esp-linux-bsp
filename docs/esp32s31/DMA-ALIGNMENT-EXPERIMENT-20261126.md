@@ -349,3 +349,54 @@ Private Orion archive:
 76,608 bytes, SHA-256
 `d9d90615769dd8a78ad5e16f2acdea516bdc8552a63fb8be3d030f3da7fec411`.
 Raw logs not published.
+
+## Physical SWIOTLB counter and 1 MiB integrity check
+
+After the extended screen, the original and exact same candidate
+were tested independently using the new diagnostic script, whose
+SHA-256 is 84a521c7b2ffbf41347ad2c9ef4f5b3171d28e4c2fc2160b8cda0a3555417bff.
+Original DTB, command line, both harts and Kingston medium were
+preserved, with read-only debugfs mount only if needed (unmounted
+on completion). Eight 128 KiB reads at the same block offsets
+completed in each phase; all eight content digests matched.
+No USB mounting or writes.
+
+| Counter (slots) | Original before/after | Candidate before/after |
+| --- | --- | --- |
+| io_tlb_nslabs | 256 / 256 | 256 / 256 |
+| io_tlb_used | 0 / 0 | 0 / 0 |
+| io_tlb_used_hiwater | 0 / 0 | 1 / 1 |
+
+All eight per-read samples had the same respective peak values.
+One slot is 2 KiB. The candidate had already used a SWIOTLB
+slot before the read workload; the original had not recorded
+any use. This directly confirms different aggregate bounce-pool
+activity, while retaining equal capacity and idle use. It does
+not attribute the bounce to DWC2, size, direction, alignment
+reason, or prove that it prevented an Oops. Only one measurement
+per revision was made; no high-water reset was performed.
+
+The original XIP was restored again, all five components
+verified, and final original boot/profile passed. UART free.
+Private Orion archive:
+`~/source/build/s31-dma-long-screen-20261127/swiotlb-evidence.tar.gz`
+(14,559 bytes), SHA-256
+`ef571cfc32fd5958ae159251e6e654a3ad86f94d9ac63a50c4dc445e73a13460`.
+Raw logs and sampled media-content digests are not published.
+
+### Readiness decision
+
+The narrow alignment change is supported by source ordering,
+official 64-byte line documentation, full exact-config build,
+repeated controlled physical screens, rollback recurrence,
+and aggregate pool telemetry. Before an upstream RFC, prefer
+a small matched opt-in diagnostic for the successful
+alignment-selected bounce path (device, direction and size
+bucket), using identical instrumentation in A/B, and verify
+DWC2's temporary buffer path and firmware cache behavior.
+Regress Ethernet traffic, USB data, I2C, GPIO/RMT, CAN in the
+authorized available configurations, and reboot. A subsequent
+RFC can state the initialization-order bug with appropriately
+limited hardware evidence, without claiming a definitive cure
+for the intermittent failures or bundling the DMA32 or firmware
+investigations.
