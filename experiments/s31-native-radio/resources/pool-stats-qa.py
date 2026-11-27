@@ -44,11 +44,24 @@ class ConsoleCaptureError(RuntimeError):
         super().__init__(reason)
         self.partial = partial
 
-def capture_command(s, cmd, seconds=30):
+def send_paced(s, payload, chunk_bytes=32, pause=.01):
+    """Bound each UART burst; this is a transport experiment, not a driver fix."""
+    for offset in range(0, len(payload), chunk_bytes):
+        chunk = payload[offset:offset + chunk_bytes]
+        if s.write(chunk) != len(chunk):
+            raise ConsoleCaptureError("short serial write", "")
+        if offset + len(chunk) < len(payload):
+            time.sleep(pause)
+
+def capture_command(s, cmd, seconds=30, paced=False):
     """Use the existing command framing, preserving partial output on timeout."""
     tag = secrets.token_hex(8)
-    s.write((cmd + "; printf '\\n__RADIO%s=%s__\\n' " +
-             tag + ' "$?"\r').encode())
+    payload = (cmd + "; printf '\\n__RADIO%s=%s__\\n' " +
+               tag + ' "$?"\r').encode()
+    if paced:
+        send_paced(s, payload)
+    else:
+        s.write(payload)
     pattern = re.compile(rb"(?m)^__RADIO" + tag.encode() + rb"=(\d+)__$")
     end = time.monotonic() + seconds
     data = bytearray()
@@ -80,6 +93,7 @@ def main():
     ap.add_argument("--out", type=pathlib.Path, required=True)
     ap.add_argument("--profile", choices=("baseline", "instrumented"), required=True)
     ap.add_argument("--usb-only", action="store_true", help="explicit partial test without Ethernet workloads")
+    ap.add_argument("--paced-uart", action="store_true", help="experimental 32-byte UART bursts separated by 10 ms")
     ap.add_argument("--stats-unread", action="store_true", help="instrumented kernel control: do not mount or read debugfs statistics")
     ap.add_argument("--configure-ethernet", action="store_true", help="dedicated bench only: enable eth0 and DHCP if no eth0 gateway; runtime settings persist until reboot")
     a = ap.parse_args()
@@ -102,7 +116,7 @@ def main():
                       write_timeout=5, exclusive=True)
     s.port = "/dev/ttyUSB0"
     s.dtr = s.rts = False
-    result = {"profile": a.profile, "scope": "usb-only" if a.usb_only else "full", "status": "INCOMPLETE", "stats_mode": "sampled" if sampled else ("unread" if a.stats_unread else "baseline"), "samples": [], "phases": {}}
+    result = {"profile": a.profile, "scope": "usb-only" if a.usb_only else "full", "status": "INCOMPLETE", "stats_mode": "sampled" if sampled else ("unread" if a.stats_unread else "baseline"), "samples": [], "phases": {}, "paced_uart": a.paced_uart}
     body_ok = False
     cleanup_errors = []
     mounted = made = False
@@ -114,7 +128,7 @@ def main():
             log.write(f"\nCOMMAND {cmd}\nHOST_MONOTONIC {time.monotonic():.6f}\n")
             log.flush()
             try:
-                out, rc = capture_command(s, cmd, seconds=seconds)
+                out, rc = capture_command(s, cmd, seconds=seconds, paced=a.paced_uart)
             except ConsoleCaptureError as exc:
                 log.write("PARTIAL_OUTPUT_BEGIN\n" + exc.partial + "\nPARTIAL_OUTPUT_END\n")
                 log.write(f"TRANSPORT_ERROR {exc!r}\n")
@@ -147,16 +161,7 @@ def main():
         result["samples"].append({"phase": label, **v})
         return v
     def counters():
-        # Emit a labelled, short line rather than interpreting three
-        # unlabelled lines in an asynchronous console transcript.
-        out = run('printf "\\nPOOL_IO_DISK_BEGIN\\n"; '
-                  'read a b sectors rest < /sys/class/block/sda/stat && '
-                  'printf "POOL_IO_RX_BEGIN\\n" && '
-                  'read rx < /sys/class/net/eth0/statistics/rx_packets && '
-                  'printf "POOL_IO_TX_BEGIN\\n" && '
-                  'read tx < /sys/class/net/eth0/statistics/tx_packets && '
-                  'printf "POOL_IO %s %s %s\\n" "$sectors" "$rx" "$tx"')
-        return parse_counters(out)
+        return parse_counters(run("pool_io"))
     def traffic(phase, usb, net):
         before = counters()
         started = time.monotonic()
@@ -276,6 +281,16 @@ def main():
         run("umask 077; mkdir " + tmp)
         made = True
         snap("idle")
+        # Install the short in-shell command at idle; avoid repeatedly
+        # transmitting the full counter expression during I/O load.
+        run('pool_io() { printf "\\nPOOL_IO_DISK_BEGIN\\n"; '
+            'read a b sectors rest < /sys/class/block/sda/stat && '
+            'printf "POOL_IO_RX_BEGIN\\n" && '
+            'read rx < /sys/class/net/eth0/statistics/rx_packets && '
+            'printf "POOL_IO_TX_BEGIN\\n" && '
+            'read tx < /sys/class/net/eth0/statistics/tx_packets && '
+            'printf "POOL_IO %s %s %s\\n" "$sectors" "$rx" "$tx"; }')
+        counters()
         for skip in SKIPS:
             out = run(f"dd if=/dev/sda bs=4096 skip={skip} count=32 | sha256sum")
             require(re.search(r"(?m)^" + hashes[skip] + r"\s+-\s*$", out) and

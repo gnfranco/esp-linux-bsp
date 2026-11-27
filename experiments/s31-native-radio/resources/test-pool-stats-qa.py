@@ -75,5 +75,24 @@ class CaptureTests(unittest.TestCase):
         with self.assertRaises(qa.ConsoleCaptureError) as e:
             qa.capture_command(self.Serial(False), "true", .01)
         self.assertEqual(e.exception.partial, "partial\n")
+class PacedSenderTests(unittest.TestCase):
+    def test_exact_bytes_and_bound(self):
+        class Serial:
+            def __init__(self):
+                self.chunks = []
+            def write(self, data):
+                self.chunks.append(data)
+                return len(data)
+        s = Serial()
+        payload = bytes(range(100))
+        qa.send_paced(s, payload, pause=0)
+        self.assertEqual(b"".join(s.chunks), payload)
+        self.assertEqual([len(x) for x in s.chunks], [32, 32, 32, 4])
+    def test_short_write(self):
+        class Serial:
+            def write(self, data):
+                return len(data) - 1
+        with self.assertRaises(qa.ConsoleCaptureError):
+            qa.send_paced(Serial(), b"test", pause=0)
 if __name__ == "__main__":
     unittest.main()

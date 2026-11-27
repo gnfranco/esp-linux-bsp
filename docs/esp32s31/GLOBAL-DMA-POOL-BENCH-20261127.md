@@ -320,3 +320,29 @@ with Ethernet frame loss. If reproducing a target stall, distinguish
 kernel liveness from UART access and inspect the previously qualified
 early DMA alignment fix as a separate comparison (not a proven cause).
 No new radio allocation or driver patch justified by this result.
+
+V8 post-restore baseline: original flash verified, Linux booted,
+isolated Ethernet 10/10 and USB 32 MiB passed. Concurrent workload
+again lost the UART command response. Partial capture contained a
+corrupted/truncated command echo ("princlass/net/_IO_DISK_BEGIN...")
+and no executed counter-stage marker. This does not locate a stall
+in stmmac_get_stats64. While UART cleanup was still unresponsive,
+an independent ping from Orion to the board's DHCP address, matching
+the previously observed board Ethernet MAC in its neighbor table,
+returned 5/5 replies (0% loss). This proves the target IP stack
+responded during that console outage, not that every kernel task
+remained healthy. This probe was after the workload timeout and
+is not counted in the comparative traffic results.
+Interrupted only the stuck post-restore QA cleanup; UART released.
+Flash remains original Lab v1. Post-restore full result INCOMPLETE.
+Private full-session-v8-restored-evidence.tar.gz transferred and
+hash verified, including partial UART output and independent ping.
+
+Prepared next transport experiment: optional --paced-uart sends
+32-byte bursts with 10 ms gaps and rejects short writes; counter
+expression is installed as a shell function at idle, then invoked
+by a short pool_io command during load. Twelve unittest methods
+passed in normal and optimized Python, including sender byte
+preservation and short write detection. No claim that pacing fixes
+the underlying UART issue; physical validation pending. Do not
+change the kernel DMA statistics or stmmac driver on this evidence.
