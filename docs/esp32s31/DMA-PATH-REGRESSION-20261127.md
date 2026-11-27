@@ -166,3 +166,49 @@ the original release full image at offset 0x500000 (first
 03813e4ff39cf7dee15334f454ec327f5c306d789fd0d6065fc2b101e9dd01e7.
 The subsequent hardware script verifies and restores the whole
 modified span, in addition to verifying the five release components.
+
+## Matched diagnostic hardware result
+
+The second A boot enumerated Kingston and completed the read test;
+B enumerated and passed on its measured boot. Both were verified
+against the original DTB, exact config, and same command line.
+Collector c8d658d (SHA-256
+ e1af9ddfc9470e444bbf29977f0ac58a656bfe292339b32c778f6d9948298c31)
+collected boot/idle/read snapshots with distinct boot IDs per run.
+All snapshots had zero lost events for CPUs 0 and 1, and no
+saturated or decreasing counters. No USB-media mounts/writes.
+
+Boot USB selected-path counts (sum of both CPUs):
+
+| Direction | Payload/transfer bytes | A direct | A align_ok | B direct | B align_ok |
+| --- | --- | ---: | ---: | ---: | ---: |
+| from | 0-16 | 4 | 0 | 0 | 4 |
+| from | 17-32 | 4 | 0 | 0 | 4 |
+| from | 33-64 | 2 | 0 | 2 | 0 |
+| from | 128+ | 19 | 0 | 19 | 0 |
+| to | 0-16 | 13 | 0 | 13 | 0 |
+
+No forced/address-selected bounce or failure or DWC2 host-URB
+aligned-temporary-buffer event was observed in these measured
+snapshots. No emac or other-class streaming-map event was
+reported; no Ethernet gateway available. This is not a proof
+that all other DMA paths are unused.
+
+Idle delta: no events in either run. Read phase: 537 A and
+588 B USB from/128+ direct maps; different counts despite the
+same 1 MiB workload, not a throughput comparison. No additional
+alignment bounces. All eight 128 KiB hashes matched A, B, and
+the previously qualified reference. Aggregate SWIOTLB 256 slots,
+idle usage zero, boot and post-read hiwater 0 in A and 1 in B.
+
+This attributes the previously observed SWIOTLB high-water
+behavior to eight USB DMA_FROM_DEVICE mappings selected for
+alignment bounce in B (four 0–16 B, four 17–32 B), rather than
+force/address selection or the recorded DWC2 URB temporary
+allocation path. A chose direct for those same size/direction
+bins. It demonstrates the intended size-based mapping decision
+and preserved read integrity under the matched instrumented
+builds. Does not prove the cause of the previous Oops or of the
+first A USB configuration failure, nor timing equivalence with
+the exact production-like candidate. No claim of independent
+trials or definitive fault cure.
