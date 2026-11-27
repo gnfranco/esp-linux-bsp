@@ -21,6 +21,9 @@ class LogScreen(unittest.TestCase):
             self.assertEqual(m.screen("[ 2.2] "+line)[0][0], "kernel_fault")
     def test_usb_timeout(self):
         self.assertEqual(m.screen("\x1b[31m[ 7.377671] usb 1-1: device descriptor read/64, error -110\x1b[m")[0][0], "usb_timeout")
+    def test_prompt_and_disconnect(self):
+        self.assertEqual(m.screen("~ # [  7.0] usb 1-1: USB disconnect, device number 2")[0][0],"usb_disconnect")
+        self.assertEqual(m.screen("~ # [ 23.4] rcu: INFO: rcu_sched self-detected stall on CPU")[0][0],"rcu_stall")
     def test_hung_task(self):
         self.assertEqual(m.screen("[  80.0] INFO: task worker:5 blocked for more than 60 seconds.")[0][0], "hung_task")
     def test_boot_info_no_match(self):

@@ -129,3 +129,44 @@ Session exit 0 for the bounded idle observation, not a radio or USB
 qualification. All three new evidence archives independently verified.
 rcu-restored-evidence.tar.gz SHA-256
 7c3d73363c7fda7a0acedeb9a311a7f594dc9469b705e03d45a6023a99311858.
+
+## UART/tmpfs workload control
+
+An additional original Lab v1 boot ran the exploratory v1 runner:
+80 KiB deterministic synthetic data, 214 paced base64 UART chunks,
+target SHA-256 be73f91b0f28f2a6c43b00e4dc8afb72f14d6040f88b27b76df6740abcc96c1c,
+read-only debugfs mount/unmount, temporary files removed, then 100 s
+passive observation and dmesg/boot ID/profile recheck.
+No ELF execution, radio, lease access, USB media writes or flash
+writes. All four control markers, OBSERVED, zero screened alerts,
+exit 0, UART free. This is a single exploratory negative result;
+it does not establish that UART activity is harmless in all boots.
+Actual mount listing showed one /tmp tmpfs rw entry; v1 did not
+enforce exclusive mounts or exact USB identity. Preserve the v1
+runner, not treat it as equivalent to the hardened test.
+
+Private baseline-uart-evidence.tar.gz (110499 bytes) includes exact
+v1 runner, screen, full commands/raw console and before/after dmesg,
+result JSON, reset log. SHA-256
+6203803f2b6759c7d5ff879ab4d1a7dc8e4a7268019302574112d9314add2251.
+Transferred in 12 chunks, reconstructed digest verified on Linvora-dev.
+All four RCU evidence archives verified against SHA256SUMS.
+
+Hardened v2 runner rcu-uart-control.py checks exact profile and lease
+node/absence, mount exclusivity, direct USB topology, explicit expected
+VID:PID and known model/geometry, before/after identity and periodic
+boot/USB/dmesg checkpoints. Stop on any screened alert, retain evidence
+and mark cleanup pending before possibly lost acknowledgements.
+No blind cleanup on failed console. Reset by verified caller if needed.
+USB snapshots cannot establish continuous attachment. Trusted lab only,
+not secure against concurrent privileged mount changes. Two Astra
+read-only reviews completed; remaining findings addressed (expected
+VID:PID, direct topology, regular file/dangling symlink at lease path).
+Final changes not independently re-reviewed. Eight log screening and
+four control host unit tests passed. Hardened v2 copied and hash
+verified on Orion; not yet physically exercised. Capture the actual
+expected USB VID:PID using read-only inventory before running. Run
+identical hardened v2 controls on baseline, uncorrected session and
+alignment-only candidate. Keep physical identity and configuration
+constant; each candidate flash session requires exact span backup and
+verified rollback. Alignment build still pending in this checkpoint.

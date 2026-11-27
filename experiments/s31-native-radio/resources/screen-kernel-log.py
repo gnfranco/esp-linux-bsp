@@ -7,11 +7,12 @@ import re
 import sys
 
 ANSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
-PREFIX = r"^\s*(?:\[\s*\d+(?:\.\d+)?\]\s*)?"
+PREFIX = r"^\s*(?:~ #\s*)?(?:\[\s*\d+(?:\.\d+)?\]\s*)?"
 RULES = {
     "rcu_stall": re.compile(PREFIX + r"rcu:.*(?:self-detected stall|detected stalls?|kthread starved|timer wakeup didn.t happen|RCU CPU stall)", re.I),
     "kernel_fault": re.compile(PREFIX + r"(?:BUG:|Oops\b|Kernel panic|Unable to handle kernel|WARNING: CPU:|watchdog:.*lockup|soft lockup|list_(?:add|del) corruption|list_add double add)", re.I),
     "hung_task": re.compile(PREFIX + r"INFO: task .* blocked for more than", re.I),
+    "usb_disconnect": re.compile(PREFIX + r"usb .*?USB disconnect", re.I),
     "usb_timeout": re.compile(PREFIX + r"usb .*?(?:error -110\b|timed out|timeout\b)", re.I),
 }
 
