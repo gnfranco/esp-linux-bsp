@@ -80,3 +80,41 @@ d="$HOME/deps/s31-research/radio-demand-20261127"
 ```
 Next integrate Linux-owned physical backing and the remaining OSI
 services before attempting actual radio initialization.
+
+## Physical Lab v1 qualification
+
+Exact build-03 test-rv32 (177488 bytes) transferred through private
+RDC transport in eight compressed chunks, each hash checked, then
+reassembled and decompressed on Orion. Target RAM transfer via
+115200 baud UART with 32-byte bursts and 10 ms gaps, compressed
+payload verified before decompression, exact ELF SHA-256 verified
+on target. No flash writes, no vendor radio libraries loaded.
+
+Lab v1 RV32 Linux 6.18.0+, dual harts 0-1, CramFS read-only.
+All four modes completed with exit status 0 and exact markers:
+- S31_RADIO_OSI_ALLOC_PASS (includes 1024 concurrent allocation/free cycles)
+- S31_RADIO_OSI_PREOPEN_PASS
+- S31_RADIO_OSI_FOREIGN_PASS
+- S31_RADIO_OSI_POSTCLOSE_PASS
+
+Boot ID unchanged during the run, both harts still online and eth0
+present. Temporary payload removed from RAM, UART released.
+S31_RADIO_OSI_ALLOC_HARDWARE_PASS recorded after cleanup.
+MemAvailable was 10380 KiB before upload and 9472 KiB before cleanup;
+not a leak measurement, since the compressed and uncompressed files
+were still present at the latter reading. The previous rollback files
+on Orion passed SHA-256 checks before testing.
+
+Private evidence: ~/deps/s31-research/radio-demand-20261127/
+osi-alloc-build-03/physical-evidence (hashes verified).
+Runner SHA-256 ca9bec7e139c0004762b8459e9be245fc773814fc565b68c9bfc2a4f5d109aff.
+Log SHA-256 3ec37de774ae62b408933cf663a4aa73213dc54eeff7ad9fbefff5202bdd9076.
+Existing UART helpers: run-uart-v4.py SHA-256
+cb849e4ab7ad725ed4f3785dd581383ac6c56d701e75b361b800e0ed38234e88;
+pool-stats-qa-v9.py SHA-256
+3dcca231d1727022472bd6c87ab2f5d89a18286f895b226ce09ecd5b47d0a7cc.
+
+This qualifies the allocation callbacks with a simulated backing on
+actual hardware. It does not qualify real internal/DMA backing,
+hardware IRQ contexts, vendor initialization, or RF. No network
+traffic or full peripheral regression performed.
