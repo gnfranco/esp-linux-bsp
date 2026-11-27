@@ -148,3 +148,5 @@ successful callbacks. Qualify the F-only/DMA combined kernel and remaining
 negative sigreturn test independently before any probe using real FP,
 and defer RF initialization until all selected dependencies and resource
 ownership paths are established.
+
+Follow-up: [Thread-context counting semaphore qualification](NATIVE-OSI-SEM-20261127.md).

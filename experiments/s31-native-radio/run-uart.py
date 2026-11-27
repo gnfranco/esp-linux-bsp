@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
-"""Run a reviewed radio ABI or registration probe in target RAM; never flash or touch MMIO."""
+"""Run a reviewed radio ABI, registration or OSI primitive probe in target RAM."""
 import argparse
 import base64
 import hashlib
@@ -60,7 +60,7 @@ def main():
     ap.add_argument("--port", required=True)
     ap.add_argument("--artifact", required=True, type=pathlib.Path)
     ap.add_argument("--sha256", required=True)
-    ap.add_argument("--probe", choices=("metadata", "coex-register"), default="metadata")
+    ap.add_argument("--probe", choices=("metadata", "coex-register", "osi-sem"), default="metadata")
     a = ap.parse_args()
     payload = a.artifact.read_bytes()
     if len(payload) > 65536 or hashlib.sha256(payload).hexdigest() != a.sha256:
@@ -101,7 +101,7 @@ def main():
         if not any(line.startswith(a.sha256 + " ") for line in out.splitlines()):
             raise RuntimeError("target artifact digest mismatch")
         print("TARGET_SHA256_PASS", a.sha256, flush=True)
-        out, _ = command(s, f"{temp}/probe")
+        out, _ = command(s, f"{temp}/probe", seconds=40 if a.probe == "osi-sem" else 20)
         print(out.strip(), flush=True)
         lines = out.splitlines()
         expected = {
@@ -113,6 +113,11 @@ def main():
                               "COEX_REPLACE_IGNORED",
                               "COEX_NULL_AFTER_REGISTER_IGNORED",
                               "S31_COEX_REGISTER_PASS"},
+            "osi-sem": {"SEM_CAPACITY_PASS", "SEM_MONOTONIC_TIMEOUT_PASS",
+                        "SEM_WAKE_PASS", "SEM_CLOSE_WAKE_ALL_PASS",
+                        "SEM_DEFERRED_CANCEL_PASS", "SEM_MPMC_2048_PASS",
+                        "SEM_CLOSE_RACE_16_PASS", "SEM_CANCEL_RACE_16_PASS",
+                        "S31_OSI_SEM_PASS"},
         }[a.probe]
         if not expected.issubset(lines):
             raise RuntimeError("probe markers not confirmed")
@@ -122,8 +127,11 @@ def main():
         print(out.strip(), flush=True)
         if "0-1" not in out.splitlines() or "ETH0_PRESENT" not in out.splitlines():
             raise RuntimeError("post-probe baseline not confirmed")
-        print("S31_RADIO_ABI_HARDWARE_PASS" if a.probe == "metadata"
-              else "S31_COEX_REGISTER_HARDWARE_PASS", flush=True)
+        print({
+            "metadata": "S31_RADIO_ABI_HARDWARE_PASS",
+            "coex-register": "S31_COEX_REGISTER_HARDWARE_PASS",
+            "osi-sem": "S31_OSI_SEM_HARDWARE_PASS",
+        }[a.probe], flush=True)
     finally:
         try:
             if made:
