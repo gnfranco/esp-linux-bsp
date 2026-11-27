@@ -112,3 +112,79 @@ finish real OSI services and PHY/clock/IRQ integration, and wire
 the persistent SRAM backend only after the mapping gate. The first
 scan must be real, not a synthetic success or stubs. Full peripheral
 regression remains deferred to integration.
+
+## Physical SRAM-session qualification attempts
+
+Full kernel build completed with status 0; all five artifact hashes
+verified. Kernel xipImage 4298508 bytes SHA-256
+180a6041f4d7a785c99a8dc9e73b383b233cf22eceebb63b609dc7bfd5be4401.
+No DTB change to board; original Lab v1 bootloader and rootfs retained.
+The test source was extended to pin execution on each hart in turn
+with sched_setaffinity, verify sched_getcpu and use full CPU fences
+between serial handoffs. Test-rv32-cross-hart SHA-256
+950bb97fcfde360c6ad91f74588c635544d5bf38929c9ad751d09b4d3cf299a5,
+compressed SHA-256
+b3c4e7b8fa9fc017338fe10c13dd25924c793d1850aa83c396565041fc4de599.
+Host and RV32 compilation PASS, no change to kernel code for this test.
+Transport via scoped short-lived private release asset URLs; Orion's
+GitHub credentials were not restored or copied. Original five flash
+slots verified before initial test. The complete affected erase-aligned
+span (4300800 bytes at 0x500000) read back, hash
+8a0ef4de94b59d407cfbf668ae4625d2be9ec0d6372dcab4906e9a5ebecc0e3b,
+identical to previous proof's physical backup.
+
+Attempt 01: candidate flash independently verified, UART shell
+unavailable at 65-second deadline. No test executable was transferred
+or run. Cause undetermined; automatic rollback exact span, all five
+slots and restored runtime verified, UART free.
+
+Attempt 02: captured raw console; Linux boot and temporary arena PASS
+confirmed, SMP0-1, CramFS ro, node /dev/s31-wifi-sram-lab mode 0600,
+root:root. Harness incorrectly rejected the ANSI-colorized ls output.
+No SRAM session exercised. Corrected ANSI stripping in the next
+harness version, not a kernel change. Exact span, all five original
+slots, restored runtime and UART-free confirmed again.
+
+Evidence archives in private Linvora-dev cache:
+~/deps/s31-research/wifi-first-20261127/physical-evidence/
+attempt-01-evidence.tar.gz SHA-256
+4bddcdb55a7791143b349cddaa3a58e73b1139a3c517d81acd6f9d61650cf6a8
+attempt-02-evidence.tar.gz SHA-256
+ffa629aebf4f4e3fee836913ebe1714861ce1bd5a7e62b44ec38e77e4d640bb1
+
+Attempt 03: SRAM_SESSION_HARDWARE_PASS, exact RV32 ELF digest
+confirmed on target tmpfs, all required markers passed and rc=0.
+Copy-only scrubbed reuse, exclusive lease, rejected private/offset/
+oversized/executable mapping and executable mprotect, both directions
+of kernel/userspace CPU data visibility with migration between harts,
+bounds checks, lifetime after fd close, final unmap quarantine.
+No concurrent unsynchronized access, no DMA bus master or RF.
+Baseline pool 3 used/61 free pages; post-test 7 used/57 free pages,
+tracked counts matched, peak 7 pages, zero allocation failures.
+Exactly four pages retained, as intended. No screened kernel faults,
+both harts online, eth0 present, tmpfs artifacts removed and debugfs
+unmounted. No Ethernet traffic, USB read/write or full peripheral
+regression attempted.
+
+SRAM_SESSION_REBOOT_PASS: hardware reset via esptool flash-id,
+distinct boot ID, original 3 used/61 free pages, successful fresh
+copy-only open/close, no change to used pages or failure count.
+No quarantine log in fresh boot. This establishes bounded CPU
+cross-hart/cross-view behavior in the exercised path, not general
+cache coherence, safe mapped-page reuse without reset, concurrent
+DMA access, or a production radio allocator.
+
+attempt-03-candidate-evidence.tar.gz SHA-256
+1a4a590ac60d9e25119f65a418b761f6183273111fdd2327fe53869a99937e23.
+
+Final rollback: exact original erase span verified, all five Lab v1
+slot digests matched, restored kernel booted, both harts online,
+eth0 present and candidate proof marker absent. UART_FREE.
+Session exit 0. No user intervention or retained experimental flash.
+attempt-03-restored-evidence.tar.gz SHA-256
+122e29633ee244a9044f9b89e25c30ef200d686dc7fd7c05c65182ab87c21d4b.
+All four evidence archives hash-verified on Linvora-dev.
+Next gate: attach the bounded mapping to the OSI allocator for
+CPU-only allocations, keep DMA execution disabled until real device
+ownership, translation, alignment and quiescence are qualified.
+The ROM/link closure and F-only ABI integration are still pending.
