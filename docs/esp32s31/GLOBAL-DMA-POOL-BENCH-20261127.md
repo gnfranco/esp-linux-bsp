@@ -164,3 +164,32 @@ after DHCP. USB-only scope is unaffected. The parser tests pass.
 This establishes local Ethernet connectivity on the uninstrumented
 Lab v1; full combined workload and instrumented Ethernet qualification
 are separate tests.
+
+Baseline full-scope qualification: PASS after explicit runtime Ethernet
+activation. Ethernet 10/10 ICMP replies, USB 32 MiB read, concurrent
+32 MiB read plus 10/10 ICMP replies. Both job lifetimes overlapped and
+both device counters advanced in a common sampling interval.
+Eight USB reference hashes matched. No cleanup errors.
+Astra high follow-up review noted that the opt-in path is specific to
+the dedicated bench: it could race another DHCP client in a different
+network setup, and runtime network settings are retained until reboot.
+Do not use the option on a multihomed or otherwise managed system.
+The original observed Lab v1 had only loopback autoconfiguration and
+no DHCP client, and no persistent image change was made.
+
+Instrumented full-scope attempt: INCOMPLETE. All five baseline slots
+verified and candidate kernel verified. The Ethernet carrier and DHCP
+were established, USB identity and all eight reference digests passed.
+Ten pool snapshots: 3 pages at boot-console, 5 pages after link-up
+and after DHCP, at idle and across six Ethernet samples. Thus 20 KiB
+used, 236 KiB free, peak 20 KiB, largest extent 128 KiB, zero pool
+allocation failures. This does not measure concurrent USB/Ethernet
+bulk traffic, and is not radio admission capacity.
+The first Ethernet workload failed the required 10/10 ping summary
+criterion; the exact reply count was not retained by the v6 harness.
+Do not infer causal regression from one failed summary. Added raw ping
+output, exit code and parsed counts to private result JSON before
+assertions, preserving the strict pass criterion; parser tests pass,
+new diagnostics not yet qualified physically.
+Candidate procedure restored the original kernel and verified all
+five flash slots; no DTB/rootfs/USB write. Private logs are preserved.

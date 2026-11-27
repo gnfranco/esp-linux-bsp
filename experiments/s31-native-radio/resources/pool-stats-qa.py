@@ -130,10 +130,16 @@ def main():
                     re.search(r"(?m)^512\+0 records out\s*$", out), "short bulk USB read")
             row["usb_bytes"] = 33554432
         if net:
-            out = run(f'wait "$n"; r=$?; cat {tmp}/net; test "$r" = 0', 35)
-            require(re.search(r"10 packets transmitted, 10 (?:packets )?received", out),
-                    "Ethernet packet loss")
-            row["ping_received"] = 10
+            out, rc = h.command(s, f'wait "$n"; r=$?; cat {tmp}/net; test "$r" = 0',
+                                seconds=35, check=False)
+            result.setdefault("ping_diagnostics", {})[phase] = {"output": out, "rc": rc}
+            hits = re.findall(r"(?m)^(\d+) packets transmitted, (\d+) (?:packets )?received", out)
+            require(len(hits) == 1, "Ethernet ping summary missing or ambiguous")
+            sent, received = map(int, hits[0])
+            result["ping_diagnostics"][phase].update(sent=sent, received=received)
+            require(rc == 0 and sent == 10 and received == 10,
+                    "Ethernet ping criterion failed")
+            row["ping_received"] = received
         if usb and net:
             require(overlap and joint_progress, "joint device progress and job overlap not observed")
             row["overlap_observed"] = True
