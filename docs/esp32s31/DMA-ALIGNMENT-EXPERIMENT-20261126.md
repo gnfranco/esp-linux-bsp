@@ -85,3 +85,32 @@ A passing small sample is not proof of causality. Do not submit this
 SoC-specific experiment as a generic RISC-V fix until the mechanism
 and hardware results are validated and the maintainers' preferred
 architecture is established.
+
+## Independent source review
+
+Codex CLI 0.172.0, gpt-6.2-astra (high), reviewed the actual
+candidate without editing the source. The review confirmed that
+the Device Tree is unflattened before the alignment decision
+and found no correctness defect in the added compatibility guard.
+This is source review, not hardware qualification.
+
+With the existing SWIOTLB pool, retaining 64 bytes changes the
+eligibility for bouncing small noncoherent receive and bidirectional
+mappings; coherent and transmit-only mappings bypass this test.
+The original release already logged a 512 KiB SWIOTLB allocation.
+Verify pool size, usage and exhaustion with the candidate rather
+than attributing any result to the creation of a new pool.
+
+A separate RV32 concern was identified in `arch/riscv/mm/init.c`:
+the expression `4UL * SZ_1G` in the DMA32 physical limit calculation
+wraps to zero on RV32. This can cause the SWIOTLB allocation path
+even when no DMA32 address bouncing is necessary. Do not change
+that expression in this experiment; investigate it on a separate
+branch after checking upstream history and DMA address-limit
+semantics.
+
+Firmware cache-maintenance granularity and invalidate behavior
+remain unverified, even if the existing SBI writeback probe passes.
+Capture actual small receive-buffer bounce behavior and memory
+pressure; check the vendor cache registration and verify a
+non-S31 DT control before proposing any general RISC-V change.
