@@ -106,3 +106,32 @@ All three physical regression sessions restored and verified the
 five v1 flash components, then confirmed original boot and free UART.
 Private Orion archive regression-evidence.tar.gz: 58,607 bytes,
 SHA-256 18e71dc097e2cb7f9cfe61cc8cee366592b9f6e0f39ad5f87859a33a61e75809.
+
+## Matched full builds
+
+The first default-relaxation diagnostic link failed with
+R_RISCV_RVC_JUMP relocation truncated against ns_capable_noaudit
+in kernel/ptrace.o. That object had the exact same SHA-256 as
+in the already-qualified candidate, suggesting a layout-sensitive
+linker relaxation problem rather than a source change in ptrace.
+The diagnostic A and B builds both succeeded with the existing
+release-like config and explicitly matched vmlinux linker flags
+'-z norelro --build-id=sha1 --no-relax'. This is a diagnostic-only
+workaround; the uninstrumented candidate was not rebuilt or
+changed. Do not infer timing equivalence to that candidate.
+
+| Profile | Kernel commit | XIP bytes | XIP SHA-256 |
+| --- | --- | ---: | --- |
+| A baseline | 9e7d859b1a60b11246506b24e9c17c27d898c3e6 | 4619916 | e9d9d276d02ae76eef79bd5b203afa1b0a4f986ef7b5618f85e95d54192789c1 |
+| B retained | c49cd5ce797fbb76fff01a7116bae85f01a30c0d | 4619916 | 0bedb065ffa146961b1f750181e459485956690dec7d021a821776047ebdda50 |
+
+Both DTBs byte-identical to the candidate DTB, both configs
+identical to each other, both XIPs fit the 7 MiB kernel slot.
+The retained branch is the baseline diagnostic tree plus the
+single candidate change in arch/riscv/mm/dma-noncoherent.c.
+Built artifacts and full logs preserved in
+~/deps/s31-research/s31-dma-diag-pair-20261127 on Linvora-dev.
+The experiment/s31-dma-alignment worktree returned to its original
+clean candidate branch and exact candidate artifact verified.
+The two XIPs and pinned collector were transported using a
+private draft, not a release; no raw hardware logs included.
