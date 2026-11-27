@@ -52,5 +52,28 @@ class ConsoleParser(unittest.TestCase):
         for out in ("", "10 packets transmitted, 10 received\n10 packets transmitted, 9 received"):
             with self.subTest(out=out), self.assertRaises(RuntimeError):
                 qa.parse_ping(out)
+class CaptureTests(unittest.TestCase):
+    class Serial:
+        def __init__(self, finished):
+            self.finished = finished
+            self.data = b""
+        def write(self, data):
+            import re
+            tag = re.search(rb"([0-9a-f]{16}) ", data)[1]
+            self.data = b"partial\r\n"
+            if self.finished:
+                self.data += b"__RADIO" + tag + b"=0__\r\n"
+        @property
+        def in_waiting(self):
+            return len(self.data)
+        def read(self, n):
+            value, self.data = self.data[:n], self.data[n:]
+            return value
+    def test_completed(self):
+        self.assertEqual(qa.capture_command(self.Serial(True), "true", .1), ("partial\n", 0))
+    def test_timeout_preserves_output(self):
+        with self.assertRaises(qa.ConsoleCaptureError) as e:
+            qa.capture_command(self.Serial(False), "true", .01)
+        self.assertEqual(e.exception.partial, "partial\n")
 if __name__ == "__main__":
     unittest.main()

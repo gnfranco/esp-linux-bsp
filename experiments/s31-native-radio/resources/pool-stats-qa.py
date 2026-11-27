@@ -39,6 +39,30 @@ def parse_stats(out):
             "inconsistent allocatable extent")
     return v
 
+class ConsoleCaptureError(RuntimeError):
+    def __init__(self, reason, partial):
+        super().__init__(reason)
+        self.partial = partial
+
+def capture_command(s, cmd, seconds=30):
+    """Use the existing command framing, preserving partial output on timeout."""
+    tag = secrets.token_hex(8)
+    s.write((cmd + "; printf '\\n__RADIO%s=%s__\\n' " +
+             tag + ' "$?"\r').encode())
+    pattern = re.compile(rb"(?m)^__RADIO" + tag.encode() + rb"=(\d+)__$")
+    end = time.monotonic() + seconds
+    data = bytearray()
+    while time.monotonic() < end:
+        data.extend(s.read(min(s.in_waiting or 1, 4096)))
+        clean = bytes(data).replace(b"\r", b"").replace(b"\0", b"")
+        match = pattern.search(clean)
+        if match:
+            return clean[:match.start()].decode(errors="replace"), int(match.group(1))
+        if len(data) > 256 * 1024:
+            raise ConsoleCaptureError("target output limit exceeded", clean.decode(errors="replace"))
+    raise ConsoleCaptureError("target command timeout",
+                              bytes(data).replace(b"\r", b"").replace(b"\0", b"").decode(errors="replace"))
+
 def parse_counters(out):
     rows = re.findall(r"(?m)^POOL_IO ([0-9]+) ([0-9]+) ([0-9]+)$", out)
     require(len(rows) == 1, "I/O counters missing or ambiguous")
@@ -56,8 +80,12 @@ def main():
     ap.add_argument("--out", type=pathlib.Path, required=True)
     ap.add_argument("--profile", choices=("baseline", "instrumented"), required=True)
     ap.add_argument("--usb-only", action="store_true", help="explicit partial test without Ethernet workloads")
+    ap.add_argument("--stats-unread", action="store_true", help="instrumented kernel control: do not mount or read debugfs statistics")
     ap.add_argument("--configure-ethernet", action="store_true", help="dedicated bench only: enable eth0 and DHCP if no eth0 gateway; runtime settings persist until reboot")
     a = ap.parse_args()
+    if a.stats_unread and (a.profile != "instrumented" or a.usb_only):
+        ap.error("--stats-unread requires the instrumented full-scope profile")
+    sampled = a.profile == "instrumented" and not a.stats_unread
     ref = json.loads(a.reference.read_text())
     hashes = {x["skip_blocks"]: x["sha256"] for x in ref["samples"]}
     require(set(hashes) == set(SKIPS) and all(re.fullmatch(r"[a-f0-9]{64}", x)
@@ -74,7 +102,7 @@ def main():
                       write_timeout=5, exclusive=True)
     s.port = "/dev/ttyUSB0"
     s.dtr = s.rts = False
-    result = {"profile": a.profile, "scope": "usb-only" if a.usb_only else "full", "status": "INCOMPLETE", "samples": [], "phases": {}}
+    result = {"profile": a.profile, "scope": "usb-only" if a.usb_only else "full", "status": "INCOMPLETE", "stats_mode": "sampled" if sampled else ("unread" if a.stats_unread else "baseline"), "samples": [], "phases": {}}
     body_ok = False
     cleanup_errors = []
     mounted = made = False
@@ -83,14 +111,18 @@ def main():
     def command(cmd, seconds=30, check=True):
         # Keep every response, even if a parser or exit-status check fails.
         with (a.out / "uart-commands.log").open("a") as log:
-            log.write(f"\nCOMMAND {cmd}\n")
+            log.write(f"\nCOMMAND {cmd}\nHOST_MONOTONIC {time.monotonic():.6f}\n")
             log.flush()
             try:
-                out, rc = h.command(s, cmd, seconds=seconds, check=False)
+                out, rc = capture_command(s, cmd, seconds=seconds)
+            except ConsoleCaptureError as exc:
+                log.write("PARTIAL_OUTPUT_BEGIN\n" + exc.partial + "\nPARTIAL_OUTPUT_END\n")
+                log.write(f"TRANSPORT_ERROR {exc!r}\n")
+                raise
             except Exception as exc:
                 log.write(f"TRANSPORT_ERROR {exc!r}\n")
                 raise
-            log.write(out + f"\nRC {rc}\n")
+            log.write(out + f"\nRC {rc}\nHOST_MONOTONIC_END {time.monotonic():.6f}\n")
         require(not check or rc == 0, f"target command failed: rc={rc}")
         return out, rc
     def run(cmd, seconds=30):
@@ -104,7 +136,7 @@ def main():
         nonlocal last
         if check_boot:
             require(boot() == initial_boot, "unexpected reboot")
-        if a.profile == "baseline":
+        if not sampled:
             return None
         v = parse_stats(run("cat " + STATS))
         if last:
@@ -117,10 +149,13 @@ def main():
     def counters():
         # Emit a labelled, short line rather than interpreting three
         # unlabelled lines in an asynchronous console transcript.
-        out = run('read a b sectors rest < /sys/class/block/sda/stat && '
+        out = run('printf "\\nPOOL_IO_DISK_BEGIN\\n"; '
+                  'read a b sectors rest < /sys/class/block/sda/stat && '
+                  'printf "POOL_IO_RX_BEGIN\\n" && '
                   'read rx < /sys/class/net/eth0/statistics/rx_packets && '
+                  'printf "POOL_IO_TX_BEGIN\\n" && '
                   'read tx < /sys/class/net/eth0/statistics/tx_packets && '
-                  'printf "\\nPOOL_IO %s %s %s\\n" "$sectors" "$rx" "$tx"')
+                  'printf "POOL_IO %s %s %s\\n" "$sectors" "$rx" "$tx"')
         return parse_counters(out)
     def traffic(phase, usb, net):
         before = counters()
@@ -189,7 +224,7 @@ def main():
         require(not any(re.match(r"^/dev/sd[a-z]", x) for x in lines), "USB is mounted")
         require(any(" /tmp tmpfs " in x for x in lines), "RAM workspace unavailable")
         initial_boot = boot()
-        if a.profile == "instrumented":
+        if sampled:
             _, rc = command("grep -q ' /sys/kernel/debug debugfs ' /proc/mounts", check=False)
             if rc:
                 run("mount -t debugfs -o ro debugfs /sys/kernel/debug")
@@ -256,7 +291,7 @@ def main():
         errors = run("dmesg", seconds=45)
         require(not re.search(r"Oops \[|Kernel panic|list_(add|del) corruption|Unable to handle kernel|DMA-API:|swiotlb buffer is full|I/O error, dev sd", errors, re.I),
                 "kernel error observed")
-        if a.profile == "instrumented":
+        if sampled:
             delta = result["samples"][-1]["allocation_failures"] - result["samples"][0]["allocation_failures"]
             result["allocation_failures_delta"] = delta
             require(delta == 0, "new global pool allocation failures")
@@ -268,21 +303,30 @@ def main():
                 try:
                     command('wait; rm -f ' + tmp + '/usb ' + tmp + '/net; rmdir ' + tmp,
                               seconds=120)
+                except KeyboardInterrupt:
+                    cleanup_errors.append("RAM workspace: interrupted")
+                    raise
                 except Exception as exc:
                     cleanup_errors.append("RAM workspace: " + type(exc).__name__)
             if mounted:
                 try:
                     run("umount /sys/kernel/debug")
+                except KeyboardInterrupt:
+                    cleanup_errors.append("debugfs: interrupted")
+                    raise
                 except Exception as exc:
                     cleanup_errors.append("debugfs: " + type(exc).__name__)
         finally:
             s.close()
             result["cleanup_errors"] = cleanup_errors
             if body_ok and not cleanup_errors:
-                result["status"] = "USB_ONLY_PASS" if a.usb_only else "PASS"
+                result["status"] = ("USB_ONLY_PASS" if a.usb_only else
+                                    "UNREAD_CONTROL_PASS" if a.stats_unread else "PASS")
             (a.out / "result.json").write_text(json.dumps(result, indent=2) + "\n")
     require(not cleanup_errors, "cleanup failed")
-    print("S31_GLOBAL_POOL_USB_ONLY_PASS" if a.usb_only else "S31_GLOBAL_POOL_QA_PASS", a.profile, flush=True)
+    print("S31_GLOBAL_POOL_USB_ONLY_PASS" if a.usb_only else
+          "S31_GLOBAL_POOL_UNREAD_CONTROL_PASS" if a.stats_unread else
+          "S31_GLOBAL_POOL_QA_PASS", a.profile, flush=True)
 
 if __name__ == "__main__":
     main()

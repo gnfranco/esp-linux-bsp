@@ -231,3 +231,38 @@ hypotheses, not evidence that the earlier failed ping criterion was
 caused by instrumentation. If failure persists, compare baseline,
 candidate without debugfs reads, and candidate with sparse timestamped
 reads, using identical traffic and multiple repetitions.
+
+V7 instrumented repeat: isolated Ethernet PASS (10/10), isolated USB
+PASS (32 MiB), all eight reference hashes matched. During concurrent
+workload the console command reading I/O counters timed out after five
+successful concurrent pool snapshots. Total 23 snapshots: occupancy 3
+or 5 pages, peak 5 pages, largest extent 32 pages, zero allocation
+failures. Concurrent completion and ping summary are unknown. Target
+cleanup command also did not return promptly; only the QA Python
+process was interrupted, allowing parent rollback to proceed.
+All five original flash slots verified after restoring the kernel.
+Post-restore original Lab v1 booted, Ethernet 10/10 passed; during
+isolated USB read the same counter command timed out. Its cleanup
+wait was also interrupted; UART released, no additional flash writes.
+Both JSON results are INCOMPLETE (empty cleanup_errors in v7 is not
+evidence of completed cleanup after KeyboardInterrupt). Similar
+symptom without instrumentation makes a unique instrumentation
+cause unsupported, but does not establish whether the console,
+counter access or target execution stalled. No further test run
+in this session. Private evidence archives baseline-full-02-evidence,
+full-session-v7-instrumented-evidence and full-session-v7-restored-evidence
+all transferred and hash verified.
+
+Prepared next diagnostic harness: explicit --stats-unread control for
+instrumented full profile (no debugfs mount or reads, distinct
+UNREAD_CONTROL_PASS marker). Timestamped command capture retains
+partial output on timeout, with separate markers before disk, RX and
+TX counter reads. KeyboardInterrupt is recorded as incomplete cleanup.
+Ten host unittest methods pass in normal and optimized Python, including
+mock serial completion and timeout partial capture. New diagnostics
+not yet physically tested. The Linux stmmac_get_stats64 path reads
+queue statistics using u64_stats_fetch_begin/retry; this is one
+possible location to distinguish from serial loss or block-stat access,
+not a diagnosed deadlock. Compare repeated baseline, unread control,
+and sampled candidate before claiming concurrent qualification or
+assigning a radio allocation budget. Keep original image as reference.
