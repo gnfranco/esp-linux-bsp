@@ -2,8 +2,9 @@
 
 Date: 2026-11-26 (operator local date); build started 2026-11-27 UTC.
 
-Status: experimental; source and object compilation verified. No
-candidate boot, physical qualification, or production release yet.
+Status: experimental; source, full build and controlled physical
+boot screens verified. Not a causal fix claim or production release.
+See [DMA path instrumentation and subsequent peripheral regression](DMA-PATH-REGRESSION-20261127.md).
 
 ## Baseline and rationale
 

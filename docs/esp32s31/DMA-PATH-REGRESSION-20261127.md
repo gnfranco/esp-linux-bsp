@@ -86,7 +86,9 @@ not included. Coherent mappings and MMIO are excluded.
 
 The reviewed change removed the dependency on
 DMA_BOUNCE_UNALIGNED_KMALLOC so control builds retain diagnostics,
-and explicitly guards diagnostic-only conditional branches.
+and explicitly guards diagnostic-only conditional branches. The
+follow-up read-only Codex CLI review found no material issue;
+this is source review, not physical validation.
 Affected RV32 object builds and git diff --check passed;
 checkpatch reviewed follow-up: 0 errors/0 warnings. Full patch
 has MAINTAINERS/new-files warning, expected for lab-only source.
