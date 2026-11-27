@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
-"""Run the metadata-only ABI probe in target RAM; never flash or touch MMIO."""
+"""Run a reviewed radio ABI or registration probe in target RAM; never flash or touch MMIO."""
 import argparse
 import base64
 import hashlib
@@ -60,6 +60,7 @@ def main():
     ap.add_argument("--port", required=True)
     ap.add_argument("--artifact", required=True, type=pathlib.Path)
     ap.add_argument("--sha256", required=True)
+    ap.add_argument("--probe", choices=("metadata", "coex-register"), default="metadata")
     a = ap.parse_args()
     payload = a.artifact.read_bytes()
     if len(payload) > 65536 or hashlib.sha256(payload).hexdigest() != a.sha256:
@@ -103,16 +104,26 @@ def main():
         out, _ = command(s, f"{temp}/probe")
         print(out.strip(), flush=True)
         lines = out.splitlines()
-        if not ("S31_RADIO_ABI_PASS" in lines and "PHY_CAL_VERSION=100" in lines
-                and "COEX=2.0.0" in lines and "BTDM=39ed4dc" in lines):
-            raise RuntimeError("ABI probe not confirmed")
+        expected = {
+            "metadata": {"S31_RADIO_ABI_PASS", "PHY_CAL_VERSION=100",
+                         "COEX=2.0.0", "BTDM=39ed4dc"},
+            "coex-register": {"COEX_EMPTY", "COEX_NULL_REJECTED",
+                              "COEX_VERSION_REJECTED", "COEX_MAGIC_REJECTED",
+                              "COEX_REGISTERED_PRIVATE_POINTER",
+                              "COEX_REPLACE_IGNORED",
+                              "COEX_NULL_AFTER_REGISTER_IGNORED",
+                              "S31_COEX_REGISTER_PASS"},
+        }[a.probe]
+        if not expected.issubset(lines):
+            raise RuntimeError("probe markers not confirmed")
         out, _ = command(s, "cat /sys/devices/system/cpu/online; "
                             "test -d /sys/class/net/eth0 && echo ETH0_PRESENT; "
                             "grep '^MemAvailable:' /proc/meminfo")
         print(out.strip(), flush=True)
         if "0-1" not in out.splitlines() or "ETH0_PRESENT" not in out.splitlines():
             raise RuntimeError("post-probe baseline not confirmed")
-        print("S31_RADIO_ABI_HARDWARE_PASS", flush=True)
+        print("S31_RADIO_ABI_HARDWARE_PASS" if a.probe == "metadata"
+              else "S31_COEX_REGISTER_HARDWARE_PASS", flush=True)
     finally:
         try:
             if made:

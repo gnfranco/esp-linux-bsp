@@ -248,3 +248,5 @@ leak. Full logs and artifact retained privately on respective hosts.
    A2DP PCM, coexistence and regression of other peripherals. Real differential
    CAN bus and physical audio remain separate gates. Publish no production
    image unless adequately validated.
+
+Follow-up: [Coexistence adapter registration gate, 2026-11-27](NATIVE-COEX-REGISTRATION-20261127.md).
