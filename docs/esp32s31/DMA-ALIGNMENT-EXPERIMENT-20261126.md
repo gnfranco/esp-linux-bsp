@@ -309,3 +309,43 @@ for alignment, and do not claim that a large userspace read
 proves a particular small mapping bounced. Firmware ROM status
 handling, granularity and writeback synchronization are
 separate prerequisites.
+
+## Extended A/B/B/A matched screen (2026-11-27 UTC)
+
+All four blocks ran to completion on Orion. Each used 12 warm
+reboots, same Kingston medium, same original DTB, same kernel
+configuration and command line, 2 s USB settle and 3 s between
+trials. Two recovery attempts at most were allowed after an
+unsuccessful trial; recovery outcomes are not matched trials.
+Only the XIP slot changed; all five original components
+verified after restore and UART was released.
+
+| Block | Warm passes/trials | Median passing time (s) | MemAvailable (KiB) |
+| --- | --- | ---: | --- |
+| A1 original | 12/12 | 10.68 | 9796–10088 |
+| B1 candidate | 12/12 | 10.59 | 9940–10092 |
+| B2 candidate | 12/12 | 10.61 | 9888–10180 |
+| A2 original restored | 11/12 | 10.57 | 9864–10120 |
+
+A2 warm trial 4 again had an Oops, with first access fault
+at 2.251558 s (before mass-storage detection at 2.264894 s),
+CPU0 PID39, EPC c00a229e
+(anon_vma_interval_tree_remove+0x12), RA c00b32c2
+(anon_vma_interval_tree_pre_update_vma+0x2e), bad address
+00000030. The ROM/RTS recovery passed.
+
+Each block had 13 confirmed profiles with distinct boot IDs.
+There were 26 B UART captures, with no Oops, panic or list
+corruption signature; 27 A captures, of which the above
+was the only fault capture. The two matched matrices together
+yield original 28/30 warm and 6/6 ROM/RTS, candidate 30/30
+warm and 6/6 ROM/RTS. Extraordinary rollback recovery errors
+from the earlier screen are excluded from this pooled count.
+This is supportive but not a demonstrated causal fix, and
+the trials are not necessarily statistically independent.
+
+Private Orion archive:
+`~/source/build/s31-dma-long-screen-20261127/long-screen-evidence.tar.gz`,
+76,608 bytes, SHA-256
+`d9d90615769dd8a78ad5e16f2acdea516bdc8552a63fb8be3d030f3da7fec411`.
+Raw logs not published.
