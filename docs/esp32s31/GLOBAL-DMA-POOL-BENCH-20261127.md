@@ -293,3 +293,30 @@ Control protocol: exact previously verified candidate kernel, first
 if the control passes. Verify original flash before write, verify
 candidate, restore and verify all five original slots on exit.
 No modification to the pool capacity or radio allocation policy.
+
+V8 unread candidate control: exact candidate flash verified, fresh
+boot, Ethernet isolated 10/10, USB isolated 32 MiB, all eight
+reference digests. Both jobs progressed in the concurrent phase;
+the second 32 MiB USB read finished (512+0 records in/out, rc=0).
+Actual ping transcript: 10 transmitted, 9 received, missing sequence 5,
+10% loss, command rc=0. Thus the strict full workload criterion failed,
+not a parser failure. Zero debugfs pool reads and zero pool snapshots
+in the entire control. The sampled phase was not started because
+the control failed. Cleanup returned successfully. This establishes
+that a debugfs stats read is not necessary for the observed loss; one
+short run does not attribute loss to instrumentation or the driver.
+Private archive full-session-v8-unread-evidence.tar.gz, SHA-256
+31eba89f81785857d643c520603780ad83b8511efce661a8257cc2f0759c77aa.
+All five original Lab v1 slots verified on rollback.
+
+Next distinguish rare traffic loss from console failure with repeated,
+longer paired runs and a separately recorded local endpoint observer
+on the authorized bench. Use fewer UART commands during the actual
+workload, keep packet sequence/RTT and read completion independently,
+and record boot identity and pre/post counters. An independent host
+probe should be outside the quantitative workload or explicitly included
+identically in both profiles. Do not equate ICMP nonresponse at a router
+with Ethernet frame loss. If reproducing a target stall, distinguish
+kernel liveness from UART access and inspect the previously qualified
+early DMA alignment fix as a separate comparison (not a proven cause).
+No new radio allocation or driver patch justified by this result.
