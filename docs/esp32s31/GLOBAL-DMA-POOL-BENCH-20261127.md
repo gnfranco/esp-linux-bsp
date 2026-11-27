@@ -193,3 +193,11 @@ assertions, preserving the strict pass criterion; parser tests pass,
 new diagnostics not yet qualified physically.
 Candidate procedure restored the original kernel and verified all
 five flash slots; no DTB/rootfs/USB write. Private logs are preserved.
+
+Final rollback: five flash slots verified; the original Linux booted
+and reached the post-restore workload, but its repeat full test stopped
+on "I/O counters unavailable". This is an incomplete repeat, not a
+full functional PASS. UART released. Earlier baseline full PASS remains
+valid for that run. Preserve raw evidence, improve diagnostic capture
+and repeat both profiles before attributing the ping criterion failure
+to instrumentation. No further flash performed in this session.
