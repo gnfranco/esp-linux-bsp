@@ -147,3 +147,22 @@ Corrected the preflight to require each exact hash and byte-equal
 A/B compiled DTBs, plus verification of the original release DTB
 on flash. Only the XIP slot is replaced in either phase; no DTB
 is flashed. No hardware change occurred during rejected preflight.
+
+First A boot: Linux started, both harts and CramFS confirmed;
+DWC2 created the high-speed device, but setting configuration #1
+failed with error -32 before storage enumeration. The original
+storage-required profile guard rejected this boot, so no counter
+snapshot or media read was accepted. This is an observed failure
+in the instrumented/no-relax baseline, not proof of an alignment
+cause. The collector was extended in c8d658d to preserve boot/idle
+counters even when the expected USB block device is absent, and
+only perform read tests after the exact known medium is identified.
+
+The diagnostic kernels are larger than the original XIP. A
+sector-rounded 4,620,288-byte restoration span was generated from
+the original release full image at offset 0x500000 (first
+4,294,412 bytes exact original XIP, remaining 325,876 bytes all
+0xff), SHA-256
+03813e4ff39cf7dee15334f454ec327f5c306d789fd0d6065fc2b101e9dd01e7.
+The subsequent hardware script verifies and restores the whole
+modified span, in addition to verifying the five release components.
