@@ -114,3 +114,111 @@ remain unverified, even if the existing SBI writeback probe passes.
 Capture actual small receive-buffer bounce behavior and memory
 pressure; check the vendor cache registration and verify a
 non-S31 DT control before proposing any general RISC-V change.
+
+## Complete candidate build (2026-11-27 UTC)
+
+The isolated Linvora-dev build of `xipImage dtbs` completed
+successfully (22m20s, exit 0), using the pinned exact v1 config.
+
+- XIP: 4,294,412 bytes
+- XIP SHA-256:
+  `a4ba9b2a004da5c407f0eba5cdbddf6bc4eafc250b91179329099538f7091338`
+- Private bench transport archive SHA-256:
+  `bf2dcdeed086877be7b54e7472ba58de7616a408a38416052dc6510c1dd8c013`
+- All seven constituent archive digests verified on Orion.
+- The rebuilt DTB differs from the release DTB; it is not used
+  in the bench test. Only the kernel slot changes.
+
+Disk maintenance removed only the clean, redundant DEBUG_LIST
+worktree, retaining its branch and commit. The older two build
+directories retain original configurations, XIP images, symbol
+files, logs, and archived compiler command/dependency files;
+all recorded image/config digests and archive hashes verified.
+The candidate build, original release rollback, and all toolchains
+remain intact. Approximate free disk increased from 3.2 to 5.5 GiB.
+
+## Matched physical screening with USB present (2026-11-27 UTC)
+
+The Kingston DataTraveler 3.0 (62 GB) remained connected during
+the entire A/B/A screen. All five original flash component
+digests passed before the first control and before candidate
+installation. The candidate changed only the XIP slot at
+0x500000; the original release DTB was verified again.
+
+Both controls used the same release command line:
+`earlycon=sbi console=ttyS0 root=mtd:rootfs rootfstype=cramfs ro swiotlb=128`.
+The runner required RV32 no-F, both harts online, read-only CramFS,
+fresh boot IDs after resets, the vendor cache registration message,
+and Kingston enumeration, with a 2 s USB settle in the profile and
+3 s between trials. It additionally required the 64-byte alignment
+diagnostic for the candidate and its absence in the original.
+ROM/RTS-assisted resets are not physical power cycles.
+
+| Phase | Warm software reboot | ROM/RTS-assisted reset |
+| --- | --- | --- |
+| A: original v1 | 5 PASS, 1 KERNEL_OOPS | 6 PASS |
+| B: 047a032d | 6 PASS | 6 PASS |
+| A: rollback v1 (separate recovery control) | 1 KERNEL_PANIC | Recovery Oops, then separate recovery PASS |
+
+The first A phase recorded 14 UART captures (initial, 12 trials,
+one recovery); 13 confirmed profiles with distinct boot IDs.
+Warm trial 6 failed with an Oops at 2.292600 s; the first reported
+access fault was at 2.269969 s, about 2.783 ms after the USB
+mass-storage detection at 2.267186 s. CPU0, init PID38,
+EPC c00a1de2 (vma_last_pgoff), RA c00a1eaa
+(__anon_vma_interval_tree_augment_propagate+0x20), bad address
+00000004, load page fault. ROM/RTS recovery passed.
+
+The candidate's initial boot and all 12 trials passed; 13 UART
+captures, 13 distinct confirmed boot IDs, and no Oops/panic/list
+corruption signature found. Every profile confirmed
+`ESP32-S31: retaining 64-byte DMA cache alignment`,
+the later vendor cache registration and Kingston enumeration.
+The SWIOTLB mapped range remained 0x50f58000–0x50fd8000
+(512 KiB) in both revisions.
+
+### Read-only USB integrity
+
+On a separate post-screen boot in each phase, the runner verified
+the correct RV32 two-hart CramFS profile, Kingston vendor/model,
+and absent USB mount. Four 64 KiB reads from /dev/sda at block
+offsets 0, 16, 256 and 1024 (4096-byte blocks) completed, with
+16+0 records in/out for each. All four SHA-256 digests matched
+between baseline and candidate; 256 KiB per phase. No medium
+mount or write was performed. This checks sampled data integrity,
+not all USB workloads or the specific DMA bounce mechanism.
+
+### Rollback and recurrence
+
+Only the original XIP slot was restored, then all five release
+components verified again. The restored baseline's initial boot
+passed; its first warm reboot panicked. The initial access fault
+at 2.244248 s occurred *before* USB mass-storage detection at
+2.247576 s, followed by Oops on CPU0 init PID38:
+EPC c00a1de2, RA c00a1eaa, bad address 00000004. A second
+Oops on CPU1 init PID1 at EPC c00a1de2, RA c00a1f26
+(__anon_vma_interval_tree_augment_rotate+0x12), bad address
+00000004 led to panic. The automatic ROM/RTS recovery itself
+had an Oops in anon_vma_clone+0xb8 (EPC c00af0e0, bad address
+0000011e), so the recovery screen correctly exited 94.
+The separate, single read-only ROM/RTS recovery then passed
+with original v1, both harts online, Kingston enumerated and UART
+released. No further flash writes were made.
+
+The A/B/A result strengthens the hypothesis but is not proof of
+causality or production qualification; trials are small, sequential,
+and no supply voltage/current or cache maintenance granularity
+was measured. The second failed A recovery is not counted as
+an independent matched trial. The observed fault even before
+mass-storage detection reinforces that application-level storage
+I/O is not a prerequisite. More balanced blocks and direct
+DMA-bounce evidence, plus peripheral regression testing, remain
+necessary before upstream submission.
+
+Raw UART evidence and runner are retained privately on Orion:
+`~/source/build/s31-dma-alignment-20261127/evidence.tar.gz`
+(75,316 bytes, 70 archive entries).
+SHA-256 `e0aaffc32933c2c9edae2fcfb19ed9a5f2c8474bbf2d6b3a0cc3a4804853a1a2`.
+Raw traces were not published; the transfer to Linvora-dev of
+this evidence archive has not been confirmed. Candidate binary,
+config, symbols and build logs are already on Linvora-dev.
