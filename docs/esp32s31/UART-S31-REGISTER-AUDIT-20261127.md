@@ -99,3 +99,20 @@ fix, or a console timeout as proof of a kernel hang.
    the radio allocator. No external PR until validated.
 
 This audit establishes a porting task, not a finished UART driver.
+
+## Independent port-plan review
+
+Astra high reviewed the audit, kernel clock provider and UART sources.
+Recommended independent clock-setup and REG_UPDATE capabilities,
+native binding/early console path, and preservation of firmware baud
+until the clock provider can represent the live configuration.
+Before clock or reset writes, verify bootloader parent, effective
+rate, integer/fractional dividers, gate/reset state and recovery
+console. HP_SYS_CLKRST and UART both have registers at offset 0x88
+but in different MMIO windows. Keep functional and bus clock ownership
+in the existing provider; do not make clock framework calls that may
+sleep while holding port->lock, in IRQ or in console writes. Ensure
+the console clock remains available through handoff and TTY close.
+Bound register-update waits. Independently test overflow and software
+buffer drop accounting. These are review recommendations, not
+implemented or qualified driver changes.

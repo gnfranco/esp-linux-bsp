@@ -359,3 +359,37 @@ hash verified. This is promising transport mitigation, not proof of
 the root cause or long-run stability. See UART-S31-REGISTER-AUDIT-20261127.md
 for concrete S31-vs-S3 register differences and an independent driver
 porting plan. No kernel changes for this audit.
+
+## V9 complete paired candidate qualification
+
+Same kernel commit 7a542131c806aaae330579a9955ff728506e15b1,
+same xipImage digest 13f0d4f93b52e7fd9e0a1dd737c951d6472ff320dcfee36eb757d0e4a6de3024.
+V9 harness SHA-256 3dcca231d1727022472bd6c87ab2f5d89a18286f895b226ce09ecd5b47d0a7cc.
+Paced UART enabled in all profiles. Original five flash slots verified
+before changing the kernel; candidate kernel verified before testing.
+- Unread control: UNREAD_CONTROL_PASS, 20/20 ICMP replies, two 32 MiB
+  reads, all reference hashes, concurrent progress/overlap, cleanup.
+  No pool reads/snapshots. Reset without flash write before sampled run.
+- Sampled profile: PASS, 20/20 ICMP replies, two 32 MiB reads, all
+  reference hashes, concurrent progress/overlap, cleanup; 26/26
+  internally consistent pool snapshots. Boot occupancy 3 pages,
+  link-up through final 5 pages. Peak 5, free 59, largest allocatable
+  32 pages, 0 failures (including 0 new failures). Both harts online,
+  no screened kernel error. Six concurrent-phase samples and one
+  after completion. No allocation change or radio startup.
+- Two baseline paced runs and both candidate runs passed, totaling
+  80/80 ICMP replies and 256 MiB bulk USB reads. The earlier packet
+  loss and UART timeouts remain valid historical observations.
+  This finite workload qualifies the functional instrumentation,
+  not long-duration reliability, maximum Ethernet throughput or
+  an exclusive radio allocation budget.
+
+Private evidence baseline-v9-evidence.tar.gz SHA-256
+f02e588cf5f746979a131a696652cf4b35161d5109e67239d5653c3164d0319b;
+full-session-v9-candidate-evidence.tar.gz SHA-256
+74efd17ae74eb87448283b15e5e130641c40da3de1116b6f720b47aa0c07f880.
+Both transferred and verified on Linvora-dev.
+Next radio gate: quantify real vendor allocation requests and
+reserve an explicit safety margin for existing consumers; observed
+236 KiB free is not a guaranteed radio budget. Keep UART porting
+a separate workstream. No change to physical resource ownership.
