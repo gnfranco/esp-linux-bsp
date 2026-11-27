@@ -346,3 +346,16 @@ passed in normal and optimized Python, including sender byte
 preservation and short write detection. No claim that pacing fixes
 the underlying UART issue; physical validation pending. Do not
 change the kernel DMA statistics or stmmac driver on this evidence.
+
+## V9 paced UART baseline
+
+With 32-byte bursts, 10 ms gaps and preinstalled short pool_io shell
+function, two complete Lab v1 runs passed: total 40/40 ICMP replies,
+128 MiB bulk USB reads, both sets of reference digests, joint activity,
+both harts online and successful cleanup. No UART timeout in these two
+runs. First run preceded by flash-id recovery reset; second without a
+new flash write. Private baseline-v9-evidence.tar.gz transferred and
+hash verified. This is promising transport mitigation, not proof of
+the root cause or long-run stability. See UART-S31-REGISTER-AUDIT-20261127.md
+for concrete S31-vs-S3 register differences and an independent driver
+porting plan. No kernel changes for this audit.
