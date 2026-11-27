@@ -286,3 +286,26 @@ width, exclusive address-limit semantics, memory-size cases,
 and the interaction with existing stable backports. Do not
 claim authorship of the above-4GB fix or change pool sizing
 as part of the alignment experiment.
+
+The compile-only RV32/RV64 proof is retained as
+`experiments/s31-reboot/dma32-width.c`. Espressif GCC 14.1.1
+compiled both variants with -Wall -Wextra -Werror. The RV32
+function returns zero; RV64 returns 0x51000000 for S31 RAM.
+The actual candidate ELF independently confirms the RV32
+zero store in paging_init at c0005b44. This proves the
+arithmetic behavior, not an upstream regression or a
+general-purpose fix.
+
+Codex CLI's independent source review confirmed the absence
+of event tracing in the Lab v1 config, the linked SWIOTLB
+debugfs handlers, and a second consumer of the runtime DMA
+alignment in DWC2's temporary aligned URB buffer allocation.
+For attribution, compare opt-in counters for successful
+alignment-selected direct DMA bounces with address-limited,
+forced and failed mappings, and DWC2 temporary buffer
+allocation behavior. Record directions and size buckets;
+avoid per-map logging, keep diagnostic builds identical except
+for alignment, and do not claim that a large userspace read
+proves a particular small mapping bounced. Firmware ROM status
+handling, granularity and writeback synchronization are
+separate prerequisites.
