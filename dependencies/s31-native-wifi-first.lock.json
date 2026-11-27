@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "esp_idf": {
+    "tag": "v6.1",
+    "commit": "fff9895c82d744c7237be8847347bdd1b07c6643",
+    "wifi_osi_version": 9,
+    "coex_osi_version": 2
+  },
+  "sources": {
+    "esp32-wifi-lib": "7cd4d7b2b4acc38aead43b029ac9409c3eba9c54",
+    "esp-phy-lib": "5695f4f38108658bc4a33e4712c1ebcb34911434",
+    "esp-coex-lib": "ddc56fa524a38df3098d2f36475fbe3eefe9b4f4"
+  },
+  "archive_sha256": {
+    "esp32-wifi-lib/esp32s31/libcore.a": "649dac152b6aa6a0c41d14a2e15eb2421bd85247e227aaf4bb6fbd638a748cfa",
+    "esp32-wifi-lib/esp32s31/libespnow.a": "0dc76a695732593c5078a98b253814ca3763e2ff9fcd2dc89463a4050409a593",
+    "esp32-wifi-lib/esp32s31/libmesh.a": "5cd5e3ea8f03708d9d6e2de9e329d12fcebf00af416bfa19dc1d24b6f13a590c",
+    "esp32-wifi-lib/esp32s31/libnet80211.a": "bb011bf4e8125426fe869a560808a73c12aaa19bec8cfdc68bedb7c33d1a0e24",
+    "esp32-wifi-lib/esp32s31/libpp.a": "1fe72c9b13813c30b5016055e2d3f374fd82a05fdab4d56aefcc7ea82d51dfec",
+    "esp32-wifi-lib/esp32s31/libsmartconfig.a": "f50b3c4537842374dbe2076de6427af1eb2eebc389654058e49ebb3cf02e3f2e",
+    "esp32-wifi-lib/esp32s31/libwapi.a": "1db945577a23ccdcb722e074958a656885746bfc50b31d1b2e4db3b136b83986",
+    "esp-phy-lib/esp32s31/libphy.a": "37a56eb83a54cf4378c121ff131befbc10a4490347ffe36317d66d95483578e7",
+    "esp-coex-lib/esp32s31/libcoexist.a": "9b8f55b1a1670ac8da1323595c817eca7340f073e783c162d3a2dfde7bbd19c8"
+  },
+  "rom_map_git_blob": {
+    "esp32s31.rom.api.ld": "0b49e76e4be480f3916408ecd944f4e4a5f73cfb",
+    "esp32s31.rom.coexist.ld": "2de188dc5360ee45d68ea38605cc64f8b33ed050",
+    "esp32s31.rom.ld": "bcb1c01162d3399111a80d7618c9fcca45919ab6",
+    "esp32s31.rom.libc.ld": "5e154bb98cebede5e03cdd6bce21ff362a31986d",
+    "esp32s31.rom.libgcc.ld": "9c771e465225abcd2009210c615ad185ab28e9b6",
+    "esp32s31.rom.net80211.ld": "801702ff642763f48c4116e283837ef4ccbde5dd",
+    "esp32s31.rom.newlib-nano.ld": "905091ec9a29f838447c8ad6fdef4682ecfcf9dd",
+    "esp32s31.rom.newlib.ld": "df6cb2bf5fb6f560d71b390db47699e090bbfc26",
+    "esp32s31.rom.phy.ld": "edf044ac8c3122c809c1bf9dab5fe824ac93888c",
+    "esp32s31.rom.pp.ld": "7f1f71b097129cf90ceb7d61fda92e276c000798",
+    "esp32s31.rom.rvfp.ld": "f8492a40bf5e4234adf342fac483ecfc6dbd6049",
+    "esp32s31.rom.spiflash.ld": "0663ae56ea1e963cafb242089b55fccca530d8fd",
+    "esp32s31.rom.version.ld": "1cc10a143fed001f373d9ae3def7cad04b96947f"
+  },
+  "roots": [
+    "esp_wifi_init_internal",
+    "esp_wifi_set_mode",
+    "esp_wifi_start",
+    "esp_wifi_scan_start",
+    "esp_wifi_scan_get_ap_records",
+    "esp_wifi_scan_get_ap_num",
+    "esp_wifi_stop",
+    "esp_wifi_deinit_internal"
+  ],
+  "reference": {
+    "undefined": 345,
+    "rom_name_matches": 297,
+    "nonrom_name_matches": 48
+  }
+}
