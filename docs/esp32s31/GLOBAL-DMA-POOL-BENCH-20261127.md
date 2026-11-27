@@ -393,3 +393,17 @@ Next radio gate: quantify real vendor allocation requests and
 reserve an explicit safety margin for existing consumers; observed
 236 KiB free is not a guaranteed radio budget. Keep UART porting
 a separate workstream. No change to physical resource ownership.
+
+Final V9 rollback: original kernel written and all five original
+flash slots verified. Original Lab v1 booted, link and DHCP succeeded,
+reference USB digests passed. Post-restore repeat stopped at isolated
+Ethernet strict criterion: 10 transmitted, 9 received, missing seq 0,
+rc=0, cleanup succeeded, no UART timeout. This is another actual
+ICMP nonresponse on the uninstrumented kernel, not a proof of Ethernet
+frame loss or any particular cause. Earlier complete runs remain
+valid; post-restore run is INCOMPLETE. UART free. Private restored
+evidence archive transferred and hash verified. No new driver changes
+or flash writes after restoring the kernel. Keep strict qualification
+criteria and treat sustained reliability as a distinct outstanding
+test. Proceed with vendor memory demand characterization without
+allocating any of the measured free pages yet.
