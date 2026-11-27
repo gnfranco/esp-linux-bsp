@@ -60,3 +60,26 @@ a07ebbabfb2c838a35f27768ac32f4576af46ed9d84106b917a671a3baac1e58
 gzip SHA-256
 c0ad6af763be8e0adc18bd0d81b622fe7167e882172fe0460fa9632d155bfbcc.
 No binary added to public source repo.
+
+## ROM address classification (static follow-up)
+
+The previously reproduced 297 ROM-map name matches separate into
+194 addresses in the ROM aperture and 103 addresses in IDF's reserved
+ROM SRAM range 0x2f07afb0..0x2f080000 (outside the global DMA pool).
+Seven names have different addresses in libgcc.ld and rvfp.ld:
+__adddf3, __fixdfsi, __floatsidf, __floatundidf, __floatunsidf,
+__muldf3, __subdf3. Selection depends on runtime/ABI, not arbitrary
+linker map order. This is address classification only: the aperture
+contains code and data, and SRAM contents may depend on firmware
+initialization. No access permission or runtime compatibility inferred.
+No ROM addresses mapped or called. Reproduce with:
+
+```sh
+d="$HOME/deps/s31-research/wifi-first-20261127"
+python3 experiments/s31-native-radio/wifi-rom-addresses.py \
+    "$d/rom-maps" "$d/repro-01/wifi-rom-matches.tsv"
+```
+
+S31_WIFI_ROM_ADDRESS_AUDIT_PASS; private result
+rom-address-audit.json.log SHA-256
+03485538a4bc4210c3fa36b38ab715f5524f78955ab55968b3f9be4cfc44185d.
