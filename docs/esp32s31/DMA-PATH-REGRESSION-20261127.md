@@ -254,3 +254,32 @@ Physical CAN controller loopback remains outside this follow-up
 regression unless the matrix pads GPIO35/GPIO36 are confirmed
 unconnected. Previous controller and external-bus limitations
 remain as documented; virtual SocketCAN is not SSP validation.
+
+
+## Independent upstream RFC
+
+The isolated alignment patch is [espressif/linux PR #3](https://github.com/espressif/linux/pull/3),
+branch rfc/s31-early-dma-alignment, one commit
+1c2d2160bff76b11b81c2dc4bd5ef1ecb7275094 on official
+7fdbad0c589c791cd2a6bc73fa9fcec8dbce4b11. The code diff is
+identical to the qualified combined candidate. checkpatch --strict:
+0 errors, 0 warnings, 0 checks. RV32 affected object and full XIP/DTB
+build passed (link mode default). Adapted lab config differed only by
+the two unavailable RMT options. This independent build was not
+flashed; all hardware results are explicitly from the combined
+candidate and matched diagnostic trees.
+
+Independent XIP: 4,286,220 bytes, SHA-256
+a986eb38caf18cdb9effc4e19306c1f769c7345653c49164f5acc6884d317d60
+Config SHA-256 ba53cdccbd8903637cebfcd15f8248011f9ca0e5a53bdcdc043dd0793cd17fbb
+Built DTB SHA-256 ab74c5adb5d8a042db4a2bd574741c243faa1c26cc0cc06ce7359ba759a141eb
+
+Artifacts, symbols, configs, compiler/linker metadata and raw build
+logs retained privately on Linvora-dev under
+deps/s31-research/s31-dma-pr-20261127/independent-rfc.
+The exact combined candidate and both instrumented XIPs and metadata
+remain under dma-alignment-transport/candidate and
+s31-dma-diag-pair-20261127 in deps/s31-research, respectively.
+Intermediate object caches are reproducible and not required to
+preserve these validated artifacts. Source branches are independently
+synced to the forks; no diagnostic code in the upstream RFC.
