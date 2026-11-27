@@ -68,10 +68,10 @@ def main():
             mounted = True
 
         def counters():
-            out, _ = h.command(s, "cd /sys/kernel/debug/swiotlb && "
+            out, _ = h.command(s, "(cd /sys/kernel/debug/swiotlb && "
                                "for f in io_tlb_nslabs io_tlb_used "
                                "io_tlb_used_hiwater; do "
-                               "printf '%s=' \"$f\"; cat \"$f\"; done")
+                               "printf '%s=' \"$f\"; cat \"$f\"; done)")
             values = dict(re.findall(
                 r"(?m)^(io_tlb_(?:nslabs|used|used_hiwater))=(\d+)\s*$", out))
             if len(values) != 3:
@@ -97,7 +97,7 @@ def main():
     finally:
         if mounted:
             try:
-                h.command(s, "cd / && umount /sys/kernel/debug")
+                h.command(s, "umount /sys/kernel/debug")
             finally:
                 s.close()
         else:
