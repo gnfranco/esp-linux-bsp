@@ -222,3 +222,67 @@ SHA-256 `e0aaffc32933c2c9edae2fcfb19ed9a5f2c8474bbf2d6b3a0cc3a4804853a1a2`.
 Raw traces were not published; the transfer to Linvora-dev of
 this evidence archive has not been confirmed. Candidate binary,
 config, symbols and build logs are already on Linvora-dev.
+
+## Further qualification gates and upstream separation (2026-11-27 UTC)
+
+Official Espressif Linux integration remained at
+`7fdbad0c589c791cd2a6bc73fa9fcec8dbce4b11`; the existing RMT,
+CAN and U-Boot RFCs, and the three community RFCs, remained open
+with no maintainer review at the time of inspection. Do not
+combine these contributions or resubmit their existing changes.
+
+An extended A/B/B/A screen was started with 12 warm reboots
+per block (24 per revision, identical v1 DTB and config).
+The first A block passed 12/12, illustrating baseline
+intermittency. The remaining blocks and restoration must be
+reported as actually completed rather than assumed.
+
+The v1 config enables DEBUG_FS, SWIOTLB and
+DMA_BOUNCE_UNALIGNED_KMALLOC, but not FTRACE, DMA_API_DEBUG
+or dynamic debug. The existing SWIOTLB debugfs interface
+provides `io_tlb_nslabs`, `io_tlb_used` and
+`io_tlb_used_hiwater` (units are slots, not bytes).
+A read-only diagnostic harness,
+`experiments/s31-reboot/swiotlb-screen.py`, records these
+aggregate counters before and after eight 128 KiB USB reads,
+with matching content digests. It has passed Python syntax
+compilation; hardware qualification is pending. The counters
+are not attribution of specific DWC2 mappings or bounce reasons.
+If needed, measure the small noncoherent RX/bidirectional bounce
+decision with a separate opt-in diagnostic build; do not mix
+instrumentation into the release-like A/B/B/A experiment.
+
+The official ESP-IDF v6.2 S31 checkout
+`08e0d30a74ad0bfd5a34933142b80f45619ee410` corroborates
+64-byte L1 D-cache lines in
+`components/esp_system/port/soc/esp32s31/Kconfig.cache` and
+`components/hal/esp32s31/include/hal/cache_ll.h`.
+This substantiates the chosen alignment but does not verify
+effective firmware cache synchronization correctness.
+
+A separate firmware risk needs evaluation. The official S31 ROM
+capability header sets ESP_ROM_CACHE_WRITEBACK_NEEDS_SYNC_TWICE_MAP;
+the corresponding IDF patch
+`components/esp_rom/patches/esp_rom_cache_writeback_esp32p4_esp32s31.c`
+implements the vendor's double-sync workaround. The pinned
+Lab v1 OpenSBI commit
+`0940d8a5834d02b93e2be0e60ef6505767862875` instead calls the
+ROM cache routines directly in
+`platform/generic/espressif/esp32s31/cache_mmu.c`.
+Assess applicability to the actual silicon and the shared cache
+controller's SMP serialization, and preserve the vendor's
+authorship/license if adapting its workaround. No firmware change
+was made or tested here; this is not an asserted cause.
+
+Mainline Linux master at
+`9437ee8b6cf607e883b36e44bd755968daaebd48` still contains
+`dma32_phys_limit = min(4UL * SZ_1G, (unsigned long)PFN_PHYS(max_low_pfn))`.
+Upstream `cfca5a48b03fbd33c8cb84cb73ee2e34467f3a33`
+(Troy Mitchell, "riscv: mm: fix SWIOTLB initialization for systems
+with DRAM above 4GB") addresses a different case while changing
+the SWIOTLB initialization condition. The RV32 unsigned-long
+wrap remains a separate investigation, including phys_addr_t
+width, exclusive address-limit semantics, memory-size cases,
+and the interaction with existing stable backports. Do not
+claim authorship of the above-4GB fix or change pool sizing
+as part of the alignment experiment.
