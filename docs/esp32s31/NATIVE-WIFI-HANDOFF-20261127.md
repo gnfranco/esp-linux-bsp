@@ -207,3 +207,21 @@ additional pinned PHY sources preserved. Branch
 experiment/s31-native-wifi-logging contains validated code.
 Next focus narrow ROM-state initialization/privilege and resource
 ownership gates, not another broad link dependency search.
+
+## ROM init gate and typed mutex callbacks
+
+New checkpoint branch experiment/s31-native-wifi-rom-init.
+Five relevant ROM SRAM pointer words read-only observed zero twice
+in two distinct original Lab v1 boots; no matched alerts, UART free.
+First collector failed host JSON save, corrected repeat PASS,
+all logs private and archived. No flash write, no ROM execution.
+Exact static initialization sequence and 42/100 direct ROM SRAM
+store sites verified; 68+1560+332 bytes internal allocation payload.
+Offline gate rejects nonzero/incomplete snapshot and explicitly
+never authorizes execution. Codex Sol completed five OSI mutex
+callbacks, bounded 32-slot pool, independent tests with leak
+checking and RV32 compilation PASS. No physical mutex test or
+vendor publication. See NATIVE-WIFI-ROM-INIT-GATE-20261127.md.
+Next focus spinlock/IRQ and PHY/clock broker contract, task/queue
+services, ROM address-space/privilege and safe lifetime. The
+read-only result alone is not evidence that radio can initialize.
