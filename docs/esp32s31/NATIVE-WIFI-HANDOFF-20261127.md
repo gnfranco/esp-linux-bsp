@@ -193,3 +193,17 @@ vendor runtime execution. 157 ROM addresses (100 reserved SRAM,
 ROM data initialization and access/ABI, remaining logging/runtime,
 resource broker with narrow real DMA/IRQ/PHY/clock ownership.
 No full peripheral matrix or 20-cycle campaign until Wi-Fi works.
+
+## Codex logging/runtime continuation
+
+Sol implemented real userspace logging wrappers, independently
+reproduced host and sanitized tests with leak checking, RV32 build,
+and matched link proof. See NATIVE-WIFI-LOGGING-RUNTIME-20261127.md.
+Combined scoped closure 168 -> 167 -> 148; all remaining names
+match ROM maps (100 SRAM, 48 ROM aperture), not yet executable.
+Both broad Codex jobs hit 240 s timeout; Astra left evidence of
+initialization ordering hazards, no checker. Private logs and
+additional pinned PHY sources preserved. Branch
+experiment/s31-native-wifi-logging contains validated code.
+Next focus narrow ROM-state initialization/privilege and resource
+ownership gates, not another broad link dependency search.
