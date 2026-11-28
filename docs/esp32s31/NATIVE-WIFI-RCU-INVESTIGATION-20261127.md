@@ -228,3 +228,29 @@ session wrapper 019cd313e1c4f35c0dc82a10e0944cedf35a1e7ca8deeead3830214c159efd76
 Session started on Orion, PID619929, output
 ~/source/build/s31-rcu-investigation-20261127/uart-control/hardened-v2/repeat-03/session.log.
 No three-cycle result claimed at this checkpoint.
+
+## Three-cycle initial gate complete
+
+All three additional aligned boot-only cycles completed, each with
+100 seconds of observation and no screened alerts. Distinct boot
+IDs verified. Both harts, eth0 existence, exact USB identity,
+read-only CramFS, 64-byte alignment log and unchanged boot ID within
+each run confirmed. No radio, SRAM callback or peripheral traffic
+qualification. Exact full span restore, five original slot digests,
+restored runtime and UART free all PASS. The runner exited successfully.
+Together with the previous complete UART/tmpfs test this gives one
+workload observation and three boot-only observations on this exact
+candidate. It does not prove a causal DMA fix or population reliability.
+Private repeat-03-evidence.tar.gz SHA-256
+61c4c28f376e24b5b361e9972c98474a16cd50058e6529c4ab67cc267a5a4883.
+All eight RCU evidence archives verified on Linvora-dev.
+User approved adopting the aligned base for Wi-Fi work and deferring
+the larger (20-cycle) reliability campaign until Wi-Fi is operational.
+
+Kernel integration/s31-native-wifi now points at the exact tested
+68bee8b8f52f05ecc472effa3bb90201d056c4ef, published to the personal
+fork. No upstream merge or production-release claim. The separate
+experiment/s31-native-wifi-f-only adds the two previously tested
+F-only patches (original a1b315e2e4ba, 060679ff35be) to this base.
+New HEAD 95d9d308df6e980d4b1a421c694be09b290c79a9, pushed.
+Combined qualification is still required; see handoff.
