@@ -173,3 +173,23 @@ ABI or prove runtime execution. Reproducible script and verified
 private inputs documented; narrow Codex review completed, two
 broad audits timed out. Resume with regulatory data and precise
 ROM/ABI inventory rather than redoing FTM.
+
+## Runtime closure continuation checkpoint
+
+Supersedes earlier pending kernel-build and qualification steps.
+Combined kernel 95d9d308df6e980d4b1a421c694be09b290c79a9 now passed
+bounded physical FPU/SRAM/reboot tests; promoted to personal-fork
+integration/s31-native-wifi. Lab v1 restored, both full flash spans
+and all five components verified, UART free. Private evidence saved.
+See NATIVE-WIFI-RUNTIME-CLOSURE-20261127.md for exact evidence,
+script reproduction and limitations. BSP branch
+experiment/s31-native-wifi-runtime-closure contains new checkpoint.
+Normalized 217->193 FTM->191 regulatory->166 math->164 pure
+helpers; 53 actual resolutions, zero new undefined in these four
+stages. Scoped radio free routed to the tested ledger allocator,
+combined closure 168 due five new ordinary runtime symbols. No
+vendor runtime execution. 157 ROM addresses (100 reserved SRAM,
+57 ROM aperture); actual relocation inventory saved. Next focus:
+ROM data initialization and access/ABI, remaining logging/runtime,
+resource broker with narrow real DMA/IRQ/PHY/clock ownership.
+No full peripheral matrix or 20-cycle campaign until Wi-Fi works.
