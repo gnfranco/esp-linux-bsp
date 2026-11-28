@@ -170,3 +170,61 @@ identical hardened v2 controls on baseline, uncorrected session and
 alignment-only candidate. Keep physical identity and configuration
 constant; each candidate flash session requires exact span backup and
 verified rollback. Alignment build still pending in this checkpoint.
+
+## Alignment-only candidate: first complete physical control
+
+Full build status 0, all five artifacts verified. Configuration
+and DTB are byte-identical to the uncorrected session candidate.
+Only the 13-line DMA alignment patch differs in source.
+Kernel XIP SHA-256
+e45f05329785b053503be996f9e08c37cbc59c5fab78e6d19fa93b7bffb6ba78,
+size 4298508 bytes; vmlinux SHA-256
+b4c5b0ed74829b283d16c879255f5df629ad15f4019b1042fa4ad77e321964d8.
+Private draft transport with scoped asset URL, no personal
+credential restoration on Orion.
+
+Before flashing, an original Lab v1 inventory boot failed with
+CPU1/PID38 esp-example-tar, EPC c00af0e0, RA c00af098, s2=0x11a,
+badaddr 0x11e, cause 0xd, instruction halfwords 2a03 0049.
+This exactly matches the historical anon_vma_clone+0xb8 signature
+documented in BOOT-FAULT-SCREEN-20261126.md. This is not a new
+candidate failure and does not prove a shared mechanism with RCU.
+All five original flash slots and the full erase span subsequently
+verified. Another boot succeeded and read-only inventory pinned
+USB 0951:1666, direct port 1-1, Kingston DataTraveler 3.0,
+121077761 sectors.
+
+Hardened v2 aligned-01: CONTROL_PROFILE_PASS, confirmed 64-byte
+alignment log, USB identity, all 214 UART chunks, payload digest,
+cleanup, 100 s observation, distinct before/after profile checks
+and unchanged boot ID within the run. CONTROL_RESULT OBSERVED 0,
+no screened alerts; exit 0. No radio or SRAM lease operation.
+Exact rollback span, five slot digests, original runtime and UART
+free all confirmed. This is one negative observation, not proof
+of a repaired RCU stall.
+
+Private evidence (all SHA-256 verified on Linvora-dev):
+inventory-oops-evidence.tar.gz
+fdff9934fb4f31da09aff0fbede94549ac210a1fb60ec5604080507f91986f0a
+inventory-retry-evidence.tar.gz
+a389d7d7d18f52c8b66c6597f1a1d8de8e3d5fd5a46924870ce1f8f89997085a
+aligned-01-evidence.tar.gz
+2786df52ad461ccc5d58594dc14ad00d4d7ab01b731eb9855cf28e52d05b35f6
+
+## Bounded three-boot follow-up (user-approved)
+
+User requested three additional cycles as an initial gate, with a
+larger reliability campaign deferred until Wi-Fi works. A single
+verified aligned kernel flash followed by three ROM-assisted RTS
+resets and 100 s observation per boot. Same USB identity, both harts,
+eth0 presence, read-only rootfs and alignment message; screen logs
+and require three distinct boot IDs and no alerts for 3/3 PASS.
+No UART payload upload, radio, SRAM lease, Ethernet traffic or USB
+media writes in these boot-only repeats. Not physical power cycles.
+Restore full original erase span and verify all slots afterward.
+Exact scripts copied and digest-verified in private rcu-evidence/
+repeat-03-procedure/. Boot runner b5748eafef0bf3d515a18d25f1218c44e77b36dd3f247022e52cb2bd14b27165;
+session wrapper 019cd313e1c4f35c0dc82a10e0944cedf35a1e7ca8deeead3830214c159efd76.
+Session started on Orion, PID619929, output
+~/source/build/s31-rcu-investigation-20261127/uart-control/hardened-v2/repeat-03/session.log.
+No three-cycle result claimed at this checkpoint.
