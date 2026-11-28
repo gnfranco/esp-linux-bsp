@@ -161,3 +161,15 @@ are evidence only if completed. Keep experimental branches isolated,
 signed-off commits, git diff --check, push only personal fork,
 verify clean status. Do not submit upstream without user-approved
 validated changes. No fabricated PASS, no future-work promises.
+
+## Link closure refinement (later checkpoint)
+
+See NATIVE-WIFI-FTM-LINK-20261127.md. Matched ld -r control removes
+128 unreferenced LOCAL UND entries from the original 345 count;
+217 meaningful names remain in normalized closure. Actual official
+S31 FTM source resolves 24 with zero new undefined: 193 remaining,
+180 ROM name matches and 13 non-ROM. This does not resolve ROM
+ABI or prove runtime execution. Reproducible script and verified
+private inputs documented; narrow Codex review completed, two
+broad audits timed out. Resume with regulatory data and precise
+ROM/ABI inventory rather than redoing FTM.
